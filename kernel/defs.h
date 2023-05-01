@@ -110,9 +110,12 @@ void            procdump(void);
 // kthread.c
 void                kthreadinit(struct proc *);
 struct kthread*     mykthread();
+int                 alloc_kthread_id(struct proc *p);
+struct kthread*     alloc_kthread(struct proc *p);
+void                free_kthread(struct kthread *kt);
 
-// TODO: delte this after you are done with task 2.2
-void allocproc_help_function(struct proc *p);
+// // TODO: delte this after you are done with task 2.2
+// void allocproc_help_function(struct proc *p);
 
 // swtch.S
 void            swtch(struct context*, struct context*);
