@@ -35,6 +35,7 @@ int uthread_create(void (*start_func)(), enum sched_priority priority)
         if (uthread->state == FREE)
         {
             uthread->priority = priority;
+            memset(&uthread->context, 0, sizeof(struct context));
             uthread->context.ra = (uint64)start_func;
             uthread->context.sp = (uint64)uthread->ustack + STACK_SIZE;
             uthread->state = RUNNABLE;
