@@ -84,7 +84,7 @@ void uthread_sched(struct uthread *current)
 void uthread_exit()
 {
     uthread_self()->state = FREE;
-
+    
     int i;
     int flag = 0;
     for (i = 0; i < MAX_UTHREADS; i++)
