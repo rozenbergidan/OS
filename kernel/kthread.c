@@ -24,7 +24,7 @@ void kthreadinit(struct proc *p)
 
 struct kthread *mykthread()
 {
-  return &myproc()->kthread[0];
+  return myproc()->kthread;
 }
 
 struct trapframe *get_kthread_trapframe(struct proc *p, struct kthread *kt)

@@ -11,7 +11,7 @@ uint ticks;
 
 extern char trampoline[], uservec[], userret[];
 
-// in kernelvec.S, calls kerneltrap().
+// in kernelvec.S, calls kerneltrap().§
 void kernelvec();
 
 extern int devintr();
@@ -179,7 +179,6 @@ int
 devintr()
 {
   uint64 scause = r_scause();
-
   if((scause & 0x8000000000000000L) &&
      (scause & 0xff) == 9){
     // this is a supervisor external interrupt, via PLIC.

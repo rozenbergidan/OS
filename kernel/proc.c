@@ -153,8 +153,14 @@ found:
   acquire(&p->kthread_counter_lock);
   p->kthread_counter = 1;
   release(&p->kthread_counter_lock);
-
-  alloc_kthread(p);
+  struct kthread *kt = alloc_kthread(p);
+  if (kt == 0)
+  {
+    freeproc(p);
+    release(&p->kthread->kthread_lock);
+    release(&p->lock);
+    return 0;
+  }
 
   // Set up new context to start executing at forkret,
   // which returns to user space.
@@ -266,16 +272,15 @@ void userinit(void)
   p->sz = PGSIZE;
 
   // prepare for the very first "return" from kernel to user.
-  p->kthread[0].trapframe->epc = 0;       // user program counter
-  p->kthread[0].trapframe->sp = PGSIZE;   // user stack pointer
-  p->kthread[0].kthread_state = RUNNABLE; // user stack pointer
+  p->kthread->trapframe->epc = 0;     // user program counter
+  p->kthread->trapframe->sp = PGSIZE; // user stack pointer
 
   safestrcpy(p->name, "initcode", sizeof(p->name));
   p->cwd = namei("/");
 
-  p->state = RUNNABLE;
-
-  release(&p->kthread[0].kthread_lock);
+  // p->state = RUNNABLE;
+  p->kthread->kthread_state = RUNNABLE; // user stack pointer
+  release(&p->kthread->kthread_lock);
   release(&p->lock);
 }
 
@@ -327,19 +332,19 @@ int fork(void)
   np->sz = p->sz;
 
   // copy saved user registers.
-  *(np->kthread[0].trapframe) = *(kt->trapframe);
+  *(np->kthread->trapframe) = *(kt->trapframe);
 
   // Cause fork to return 0 in the child.
-  np->kthread[0].trapframe->a0 = 0;
+  np->kthread->trapframe->a0 = 0;
   // TODO: need to set the channel
-  np->kthread[0].kthread_chan = kt->kthread_chan; //????
+  np->kthread->kthread_chan = kt->kthread_chan; //????
 
-  np->kthread[0].kthread_killed = kt->kthread_killed;
-  np->kthread[0].kthread_xstate = kt->kthread_xstate;
+  np->kthread->kthread_killed = kt->kthread_killed;
+  np->kthread->kthread_xstate = kt->kthread_xstate;
   // np->kthread[0].kthread_parent = kt->kthread_parent;
-  np->kthread[0].context = kt->context;
+  np->kthread->context = kt->context;
 
-  release(&np->kthread[0].kthread_lock);
+  release(&np->kthread->kthread_lock);
   // TODO: what to do about the kstack
   //  increment reference counts on open file descriptors.
   for (i = 0; i < NOFILE; i++)
@@ -358,12 +363,11 @@ int fork(void)
   release(&wait_lock);
 
   acquire(&np->lock);
-  acquire(&np->kthread[0].kthread_lock);
+  acquire(&np->kthread->kthread_lock);
+  
+  np->kthread->kthread_state = RUNNABLE;
 
-  np->state = RUNNABLE;
-  np->kthread[0].kthread_state = RUNNABLE;
-
-  release(&np->kthread[0].kthread_lock);
+  release(&np->kthread->kthread_lock);
   release(&np->lock);
 
   return pid;
@@ -503,7 +507,6 @@ void scheduler(void)
 {
   struct proc *p;
   struct cpu *c = mycpu();
-
   c->thread = 0;
   for (;;)
   {
@@ -513,26 +516,26 @@ void scheduler(void)
     for (p = proc; p < &proc[NPROC]; p++)
     {
       acquire(&p->lock);
-      if (p->state != USED)
+      printf("scheduler: checking process %d, process state: %d\n", p->pid, p->state);
+      if (p->state == USED)
       {
-        release(&p->lock);
-        continue;
-      }
-      acquire(&p->kthread[0].kthread_lock);
-      if (p->kthread->kthread_state == RUNNABLE)
-      {
-        // Switch to chosen process.  It is the process's job
-        // to release its lock and then reacquire it
-        // before jumping back to us.
-        p->kthread->kthread_state = RUNNING;
-        c->thread = p->kthread;
-        swtch(&c->context, &p->kthread->context);
+        acquire(&p->kthread->kthread_lock);
+        if (p->kthread->kthread_state == RUNNABLE)
+        {
+          printf("scheduler: found a runnable thread\n");
+          // Switch to chosen process.  It is the process's job
+          // to release its lock and then reacquire it
+          // before jumping back to us.
+          p->kthread->kthread_state = RUNNING;
+          c->thread = p->kthread;
+          swtch(&c->context, &p->kthread->context);
 
-        // Process is done running for now.
-        // It should have changed its p->state before coming back.
-        c->thread = 0;
+          // Process is done running for now.
+          // It should have changed its p->state before coming back.
+          c->thread = 0;
+        }
+        release(&p->kthread->kthread_lock);
       }
-      release(&p->kthread->kthread_lock);
       release(&p->lock);
     }
   }
