@@ -24,7 +24,7 @@ void kthreadinit(struct proc *p)
 
 struct kthread *mykthread()
 {
-  return &myproc()->kthread;
+  return &myproc()->kthread[0];
 }
 
 struct trapframe *get_kthread_trapframe(struct proc *p, struct kthread *kt)
@@ -48,8 +48,7 @@ int alloc_kthread_id(struct proc *p)
   release(&p->kthread_counter_lock);
   return tid;
 }
-
-static struct kthread *alloc_kthread(struct proc *p)
+struct kthread *alloc_kthread(struct proc *p)
 {
   struct kthread *kt;
   for (kt = p->kthread; kt < &p->kthread[NKT]; kt++)
@@ -70,7 +69,7 @@ static struct kthread *alloc_kthread(struct proc *p)
   return 0;
 }
 
-static void free_kthread(struct kthread *kt)
+void free_kthread(struct kthread *kt)
 {
   if(kt->trapframe)
     kfree((void *)kt->trapframe);

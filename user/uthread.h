@@ -5,10 +5,10 @@
 enum sched_priority { LOW, MEDIUM, HIGH };
 
 /* Possible states of a thread: */
-enum tstate { FREE, RUNNING, RUNNABLE };
+enum tstate { UTHREAD_FREE, UTHREAD_RUNNING, UTHREAD_RUNNABLE };
 
 // Saved registers for context switches.
-struct context {
+struct ut_context {
     uint64 ra;
     uint64 sp;
 
@@ -29,13 +29,13 @@ struct context {
 
 struct uthread {
     char                ustack[STACK_SIZE];  // the thread's stack
-    enum tstate         state;          // FREE, RUNNING, RUNNABLE
-    struct context      context;        // uswtch() here to run process
+    enum tstate         state;          // FREE, UTHREAD_RUNNING, RUNNABLE
+    struct ut_context      context;        // uswtch() here to run process
     enum sched_priority priority;       // scheduling priority
     struct uthread*     next_thread;           // next thread in run queue
 };
 
-extern void uswtch(struct context*, struct context*);
+extern void uswtch(struct ut_context*, struct ut_context*);
 /*
 This function receives as arguments a pointer to the user thread’s start
 function and a priority. The function should initialize the user thread in a

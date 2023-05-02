@@ -8,6 +8,8 @@ struct spinlock;
 struct sleeplock;
 struct stat;
 struct superblock;
+struct kthread;
+
 
 // bio.c
 void            binit(void);
@@ -108,11 +110,9 @@ int             either_copyin(void *dst, int user_src, uint64 src, uint64 len);
 void            procdump(void);
 
 // kthread.c
-void                kthreadinit(struct proc *);
+void                kthreadinit(struct proc *p);
 struct kthread*     mykthread();
-int                 alloc_kthread_id(struct proc *p);
-struct kthread*     alloc_kthread(struct proc *p);
-void                free_kthread(struct kthread *kt);
+
 
 // // TODO: delte this after you are done with task 2.2
 // void allocproc_help_function(struct proc *p);

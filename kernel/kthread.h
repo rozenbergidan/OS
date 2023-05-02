@@ -1,9 +1,8 @@
-#include "types.h"
+// #include "types.h"
+// #include "param.h"
 // #include "spinlock.h"
-#include "defs.h"
-#include "param.h"
+// #include "defs.h"
 // Saved registers for kernel context switches.
-
 struct context
 {
   uint64 ra;
@@ -22,7 +21,7 @@ struct context
   uint64 s9;
   uint64 s10;
   uint64 s11;
-}; 
+};
 
 // per-process data for the trap handling code in trampoline.S.
 // sits in a page by itself just under the trampoline page in the
@@ -48,7 +47,7 @@ enum procstate
 
 struct cpu
 {
-  struct kthread *thread;      // The process running on this cpu, or null.
+  struct kthread *thread; // The process running on this cpu, or null.
   struct context context; // swtch() here to enter scheduler().
   int noff;               // Depth of push_off() nesting.
   int intena;             // Were interrupts enabled before push_off()?
@@ -110,3 +109,7 @@ struct kthread
   struct trapframe *trapframe; // data page for trampoline.S
   struct context context;      // swtch() here to run process
 };
+
+int alloc_kthread_id(struct proc *p);
+struct kthread *alloc_kthread(struct proc *p);
+void free_kthread(struct kthread *kt);
