@@ -86,7 +86,7 @@ myproc(void)
 {
   push_off();
   struct cpu *c = mycpu();
-  struct proc *p = c->proc;
+  struct proc *p = c->kthread->parent;
   pop_off();
   return p;
 }
@@ -145,9 +145,9 @@ found:
 
   // Set up new context to start executing at forkret,
   // which returns to user space.
-  memset(&p->context, 0, sizeof(p->context));
-  p->context.ra = (uint64)forkret;
-  p->context.sp = p->kstack + PGSIZE;
+  memset(&p->kthread->context, 0, sizeof(p->kthread->context));
+  p->kthread->context.ra = (uint64)forkret;
+  p->kthread->context.sp = p->kthread->kstack + PGSIZE;
 
 
   // TODO: delte this after you are done with task 2.2
@@ -171,7 +171,7 @@ freeproc(struct proc *p)
   p->pid = 0;
   p->parent = 0;
   p->name[0] = 0;
-  p->chan = 0;
+  p->kthread->chan = 0;
   p->killed = 0;
   p->xstate = 0;
   p->state = UNUSED;
@@ -467,7 +467,7 @@ scheduler(void)
         // before jumping back to us.
         p->state = RUNNING;
         c->proc = p;
-        swtch(&c->context, &p->context);
+        swtch(&c->context, &p->kthread->context);
 
         // Process is done running for now.
         // It should have changed its p->state before coming back.
@@ -501,7 +501,7 @@ sched(void)
     panic("sched interruptible");
 
   intena = mycpu()->intena;
-  swtch(&p->context, &mycpu()->context);
+  swtch(&p->kthread->context, &mycpu()->context);
   mycpu()->intena = intena;
 }
 
@@ -555,13 +555,13 @@ sleep(void *chan, struct spinlock *lk)
   release(lk);
 
   // Go to sleep.
-  p->chan = chan;
+  p->kthread->chan = chan;
   p->state = SLEEPING;
 
   sched();
 
   // Tidy up.
-  p->chan = 0;
+  p->kthread->chan = 0;
 
   // Reacquire original lock.
   release(&p->lock);
@@ -578,7 +578,7 @@ wakeup(void *chan)
   for(p = proc; p < &proc[NPROC]; p++) {
     if(p != myproc()){
       acquire(&p->lock);
-      if(p->state == SLEEPING && p->chan == chan) {
+      if(p->state == SLEEPING && p->kthread->chan == chan) {
         p->state = RUNNABLE;
       }
       release(&p->lock);

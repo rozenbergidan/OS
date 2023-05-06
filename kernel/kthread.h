@@ -73,6 +73,18 @@ struct trapframe
   /* 280 */ uint64 t6;
 };
 
+// Per-CPU state.
+struct cpu
+{
+  struct kthread *kthread; // The kthread running on this cpu, or null.
+  struct proc *proc; // The process running on this cpu, or null.
+  struct context context;  // swtch() here to enter scheduler().
+  int noff;                // Depth of push_off() nesting.
+  int intena;              // Were interrupts enabled before push_off()?
+};
+
+extern struct cpu cpus[NCPU];
+
 enum state
 {
   UNUSED,

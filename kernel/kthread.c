@@ -34,5 +34,5 @@ struct trapframe *get_kthread_trapframe(struct proc *p, struct kthread *kt)
 void allocproc_help_function(struct proc *p) {
   p->kthread->trapframe = get_kthread_trapframe(p, p->kthread);
 
-  p->context.sp = p->kthread->kstack + PGSIZE;
+  p->kthread->context.sp = p->kthread->kstack + PGSIZE;
 }
