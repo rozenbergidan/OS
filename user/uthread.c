@@ -13,7 +13,7 @@ void init_uthreads()
 
     for (i = 0; i < MAX_UTHREADS; i++)
     {
-        threads[i].state = FREE;
+        threads[i].state = tFREE;
         threads[i].next_thread = &threads[(i + 1) % MAX_UTHREADS];
     }
 
@@ -32,12 +32,12 @@ int uthread_create(void (*start_func)(), enum sched_priority priority)
     struct uthread *uthread;
     for (uthread = threads; uthread < &threads[MAX_UTHREADS]; uthread++)
     {
-        if (uthread->state == FREE)
+        if (uthread->state == tFREE)
         {
             uthread->priority = priority;
             uthread->context.ra = (uint64)start_func;
             uthread->context.sp = (uint64)uthread->ustack + STACK_SIZE;
-            uthread->state = RUNNABLE;
+            uthread->state = tRUNNABLE;
             return 0;
         }
     }
@@ -47,7 +47,7 @@ int uthread_create(void (*start_func)(), enum sched_priority priority)
 void uthread_yield()
 {
     struct uthread *current = uthread_self();
-    current->state = RUNNABLE;
+    current->state = tRUNNABLE;
     uthread_sched(current);
 }
 
@@ -57,7 +57,7 @@ enum sched_priority get_highest_priority()
     enum sched_priority max_priority = LOW;
     for (i = 0; i < MAX_UTHREADS; i++)
     {
-        if (threads[i].state == RUNNABLE && threads[i].priority > max_priority)
+        if (threads[i].state == tRUNNABLE && threads[i].priority > max_priority)
         {
             max_priority = threads[i].priority;
         }
@@ -70,26 +70,26 @@ void uthread_sched(struct uthread *current)
     struct uthread *next_thread = current->next_thread;
     enum sched_priority max_priority = get_highest_priority();
 
-    while (next_thread->state != RUNNABLE || next_thread->priority != max_priority)
+    while (next_thread->state != tRUNNABLE || next_thread->priority != max_priority)
     {
         next_thread = next_thread->next_thread;
     }
 
-    struct context old_context = current->context;
+    struct utcontext old_context = current->context;
     current_thread = next_thread;
-    current_thread->state = RUNNING;
+    current_thread->state = tRUNNING;
     uswtch(&old_context, &current_thread->context);
 }
 
 void uthread_exit()
 {
-    uthread_self()->state = FREE;
+    uthread_self()->state = tFREE;
 
     int i;
     int flag = 0;
     for (i = 0; i < MAX_UTHREADS; i++)
     {
-        if (threads[i].state != FREE)
+        if (threads[i].state != tFREE)
             flag = 1;
     }
     if (flag == 0)
@@ -106,7 +106,7 @@ int uthread_start_all()
     int flag = 0;
     for (i = 0; i < MAX_UTHREADS; i++)
     {
-        if (threads[i].state != FREE)
+        if (threads[i].state != tFREE)
         {
             flag = 1;
             break;

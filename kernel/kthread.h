@@ -1,4 +1,6 @@
-# include "types.h"
+// #include "types.h"
+// #include "defs.h"
+
 // per-process data for the trap handling code in trampoline.S.
 // sits in a page by itself just under the trampoline page in the
 // user page table. not specially mapped in the kernel page table.
@@ -11,7 +13,28 @@
 // the trapframe includes callee-saved user registers like s0-s11 because the
 // return-to-user path via usertrapret() doesn't return through
 // the entire kernel call stack.
-struct trapframe {
+struct context
+{
+  uint64 ra;
+  uint64 sp;
+
+  // callee-saved
+  uint64 s0;
+  uint64 s1;
+  uint64 s2;
+  uint64 s3;
+  uint64 s4;
+  uint64 s5;
+  uint64 s6;
+  uint64 s7;
+  uint64 s8;
+  uint64 s9;
+  uint64 s10;
+  uint64 s11;
+};
+
+struct trapframe
+{
   /*   0 */ uint64 kernel_satp;   // kernel page table
   /*   8 */ uint64 kernel_sp;     // top of process's kernel stack
   /*  16 */ uint64 kernel_trap;   // usertrap()
@@ -50,10 +73,27 @@ struct trapframe {
   /* 280 */ uint64 t6;
 };
 
+enum state
+{
+  UNUSED,
+  USED,
+  SLEEPING,
+  RUNNABLE,
+  RUNNING,
+  ZOMBIE
+};
+
+// Per-kthread state
 struct kthread
 {
-
-  uint64 kstack;                // Virtual address of kernel stack
-
-  struct trapframe *trapframe;  // data page for trampoline.S
+  struct spinlock lock;        // Spinlock for this kthread
+  enum state state;            // Thread state
+  int killed;                  // If non-zero, have been killed
+  int xstate;                  // Exit status to be returned to parent's wait
+  void *chan;                  // If non-zero, sleeping on chan
+  int ktid;                    // Thread ID
+  struct proc *parent;         // Parent process
+  uint64 kstack;               // Virtual address of kernel stack
+  struct trapframe *trapframe; // data page for trampoline.S
+  struct context context;      // swtch() here to run process
 };
