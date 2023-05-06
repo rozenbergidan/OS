@@ -1,5 +1,5 @@
 // #include "types.h"
-// #include "defs.h"
+#include "defs.h"
 
 // per-process data for the trap handling code in trampoline.S.
 // sits in a page by itself just under the trampoline page in the
@@ -77,13 +77,12 @@ struct trapframe
 struct cpu
 {
   struct kthread *kthread; // The kthread running on this cpu, or null.
-  struct proc *proc; // The process running on this cpu, or null.
   struct context context;  // swtch() here to enter scheduler().
   int noff;                // Depth of push_off() nesting.
   int intena;              // Were interrupts enabled before push_off()?
 };
 
-extern struct cpu cpus[NCPU];
+// extern struct cpu cpus[NCPU];
 
 enum state
 {

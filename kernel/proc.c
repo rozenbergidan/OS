@@ -6,10 +6,8 @@
 #include "proc.h"
 #include "defs.h"
 
-struct cpu cpus[NCPU];
-
+extern struct cpu cpus[NCPU];
 struct proc proc[NPROC];
-
 struct proc *initproc;
 
 int nextpid = 1;
@@ -56,7 +54,9 @@ void procinit(void)
   for (p = proc; p < &proc[NPROC]; p++)
   {
     initlock(&p->lock, "proc");
+    initlock(&p->thread_id_counter_lock, "thread_id_counter_lock");
     p->state = UNUSED;
+    // acquire(&p->lock);
     kthreadinit(p);
   }
 }
@@ -86,6 +86,11 @@ myproc(void)
 {
   push_off();
   struct cpu *c = mycpu();
+  struct kthread *kt = c->kthread;
+  if(kt == 0){
+    pop_off();
+    return 0;
+  }
   struct proc *p = c->kthread->parent;
   pop_off();
   return p;
@@ -185,7 +190,7 @@ freeproc(struct proc *p)
   p->pid = 0;
   p->parent = 0;
   p->name[0] = 0;
-  p->kthread->chan = 0;
+  // p->kthread->chan = 0;
   p->killed = 0;
   p->xstate = 0;
   p->state = UNUSED;
@@ -316,13 +321,13 @@ int fork(void)
   {
     freeproc(np);
     release(&np->lock);
-    release(&np->lock);
     return -1;
   }
   np->sz = p->sz;
 
   // copy saved user registers.
   *(np->kthread[0].trapframe) = *(kt->trapframe);
+  // *(np->base_trapframes) = *(p->base_trapframes);
 
   // Cause fork to return 0 in the child.
   np->kthread[0].trapframe->a0 = 0;
@@ -486,7 +491,6 @@ void scheduler(void)
   struct proc *p;
   struct cpu *c = mycpu();
 
-  c->proc = 0;
   c->kthread = 0;
   for (;;)
   {
@@ -505,15 +509,13 @@ void scheduler(void)
         if (p->kthread[0].state == RUNNABLE)
         {
           p->kthread[0].state = RUNNING;
-          c->proc = p;
-          c->kthread = &p->kthread[0];
+          c->kthread = p->kthread;
           swtch(&c->context, &p->kthread[0].context);
         }
         release(&p->kthread[0].lock);
         // thread is done running for now.
         // It should have changed its p->state before coming back.
         c->kthread = 0;
-        c->proc = 0;
       }
       release(&p->lock);
     }
@@ -532,12 +534,14 @@ void sched(void)
   int intena;
   struct proc *p = myproc();
   struct kthread *kt = mykthread();
+  struct cpu *cp = mycpu();
+  printf("noff: %d\n", cp->noff);
 
   if (!holding(&p->lock))
     panic("sched p->lock");
   if (!holding(&kt->lock))
     panic("sched t->lock");
-  if (mycpu()->noff != 1)
+  if (cp->noff != 1)
     panic("sched locks");
   if (kt->state == RUNNING)
     panic("sched running");
@@ -673,6 +677,7 @@ void setkilled(struct proc *p)
   acquire(&p->lock);
   acquire(&p->kthread[0].lock);
   p->killed = 1;
+  p->kthread[0].killed = 1;
   release(&p->kthread[0].lock);
   release(&p->lock);
 }

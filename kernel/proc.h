@@ -29,7 +29,6 @@
 // };
 
 // extern struct cpu cpus[NCPU];
-
 // Per-process state
 struct proc {
   struct spinlock lock;     // Spinlock for this proc

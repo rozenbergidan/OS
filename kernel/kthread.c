@@ -6,6 +6,7 @@
 #include "proc.h"
 #include "defs.h"
 
+struct cpu cpus[NCPU];
 extern struct proc proc[NPROC];
 extern void forkret(void);
 
@@ -48,9 +49,6 @@ found:
 // initialize the kthread group table of the process
 void kthreadinit(struct proc *p)
 {
-
-  initlock(&p->thread_id_counter_lock, "thread_id_counter_lock");
-
   for (struct kthread *kt = p->kthread; kt < &p->kthread[NKT]; kt++)
   {
     initlock(&kt->lock, "kthread_lock");
