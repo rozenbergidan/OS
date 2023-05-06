@@ -109,3 +109,7 @@ struct kthread
   struct trapframe *trapframe; // data page for trampoline.S
   struct context context;      // swtch() here to run process
 };
+struct kthread *allockthread(struct proc *p);
+struct trapframe *get_kthread_trapframe(struct proc *p, struct kthread *kt);
+int allocktid(struct proc *p);
+void freekthread(struct kthread *kt);
