@@ -13,6 +13,9 @@ void kthreadinit(struct proc *p)
 
   for (struct kthread *kt = p->kthread; kt < &p->kthread[NKT]; kt++)
   {
+    initlock(&kt->lock, "kthread");
+    kt->state = UNUSED;
+    kt->parent = p;
 
     // WARNING: Don't change this line!
     // get the pointer to the kernel stack of the kthread
@@ -31,8 +34,9 @@ struct trapframe *get_kthread_trapframe(struct proc *p, struct kthread *kt)
 }
 
 // TODO: delte this after you are done with task 2.2
-void allocproc_help_function(struct proc *p) {
+void allocproc_help_function(struct proc *p)
+{
   p->kthread->trapframe = get_kthread_trapframe(p, p->kthread);
 
-  p->context.sp = p->kthread->kstack + PGSIZE;
+  p->kthread->context.sp = p->kthread->kstack + PGSIZE;
 }
