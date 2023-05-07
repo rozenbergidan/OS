@@ -7,7 +7,7 @@
 #include "kernel/syscall.h"
 #include "kernel/memlayout.h"
 #include "kernel/riscv.h"
-#include "kernel/kthread.h"
+// #include "kernel/kthread.h"
 #include "uthread.h"
 
 
