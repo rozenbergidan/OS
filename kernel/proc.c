@@ -403,6 +403,7 @@ void exit(int status)
   p->kthread->state = ZOMBIE;
   p->xstate = status;
   p->state = ZOMBIE;
+  release(&p->kthread->lock);
 
   release(&wait_lock);
 
@@ -487,23 +488,25 @@ void scheduler(void)
     for (p = proc; p < &proc[NPROC]; p++)
     {
       acquire(&p->lock);
-      acquire(&p->kthread->lock);
-      if (p->state == USED && p->kthread->state == RUNNABLE)
+      if (p->state == USED)
       {
         // Switch to chosen process.  It is the process's job
         // to release its lock and then reacquire it
         // before jumping back to us.
-        p->kthread->state = RUNNING;
-        c->proc = p;
-        c->kthread = p->kthread;
-        swtch(&c->context, &p->kthread->context);
-
+        // acquire(&p->kthread->lock);
+        if (p->kthread->state == RUNNABLE)
+        {
+          p->kthread->state = RUNNING;
+          c->proc = p;
+          c->kthread = p->kthread;
+          swtch(&c->context, &p->kthread->context);
+        }
+        // release(&p->kthread->lock);
         // Process is done running for now.
         // It should have changed its p->state before coming back.
         c->proc = 0;
         c->kthread = 0;
       }
-      release(&p->kthread->lock);
       release(&p->lock);
     }
   }
@@ -554,7 +557,7 @@ void forkret(void)
   static int first = 1;
 
   // Still holding p->lock from scheduler.
-  release(&myproc()->kthread->lock);
+  // release(&myproc()->kthread->lock);
   release(&myproc()->lock);
 
   if (first)
@@ -583,7 +586,7 @@ void sleep(void *chan, struct spinlock *lk)
   // so it's okay to release lk.
 
   acquire(&p->lock); // DOC: sleeplock1
-  acquire(&p->kthread->lock); // DOC: sleeplock1
+  // acquire(&p->kthread->lock); // DOC: sleeplock1
   release(lk);
 
   // Go to sleep.
@@ -596,7 +599,7 @@ void sleep(void *chan, struct spinlock *lk)
   p->kthread->chan = 0;
 
   // Reacquire original lock.
-  release(&p->kthread->lock);
+  // release(&p->kthread->lock);
   release(&p->lock);
   acquire(lk);
 }
@@ -633,20 +636,19 @@ int kill(int pid)
   for (p = proc; p < &proc[NPROC]; p++)
   {
     acquire(&p->lock);
-    acquire(&p->kthread->lock);
     if (p->pid == pid)
     {
       p->killed = 1;
-      p->kthread->killed = 1;
+      acquire(&p->kthread->lock);
       if (p->kthread->state == SLEEPING)
       {
         // Wake process from sleep().
         p->kthread->state = RUNNABLE;
       }
+      release(&p->kthread->lock);
       release(&p->lock);
       return 0;
     }
-    release(&p->kthread->lock);
     release(&p->lock);
   }
   return -1;
@@ -655,10 +657,7 @@ int kill(int pid)
 void setkilled(struct proc *p)
 {
   acquire(&p->lock);
-  acquire(&p->kthread->lock);
   p->killed = 1;
-  p->kthread->killed = 1;
-  release(&p->kthread->lock);
   release(&p->lock);
 }
 
@@ -714,6 +713,9 @@ void procdump(void)
   static char *states[] = {
       [UNUSED] "unused",
       [USED] "used",
+      [SLEEPING] "sleep ",
+      [RUNNABLE] "runble",
+      [RUNNING] "run   ",
       [ZOMBIE] "zombie"};
   struct proc *p;
   char *state;
