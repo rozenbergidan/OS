@@ -370,6 +370,21 @@ void exit(int status)
 {
   struct proc *p = myproc();
 
+   for (struct kthread *kt = p->kthread; kt < &p->kthread[NKT]; kt++)
+  {
+    acquire(&kt->lock);
+    if (kt->state != ZOMBIE || kt->state != UNUSED)
+    {
+      int status;
+      release(&kt->lock);
+      kthread_join(kt->tid, (int *)&status);
+    }
+    else
+    {
+      release(&kt->lock);
+    }
+  }
+
   if (p == initproc)
     panic("init exiting");
 
@@ -398,6 +413,7 @@ void exit(int status)
   wakeup(p->parent);
 
   acquire(&p->lock);
+
   acquire(&p->kthread->lock);
   p->kthread->xstate = status;
   p->kthread->state = ZOMBIE;
@@ -816,6 +832,12 @@ int kthread_join(int ktid, int *status)
     acquire(&kt_join->lock);
     if (kt_join->tid == ktid)
     {
+      if (kt_join->state == ZOMBIE)
+      {
+        *status = kt_join->xstate;
+        release(&kt_join->lock);
+        return 0;
+      }
       release(&kt_join->lock);
       acquire(&kt->lock);
       kt->state = SLEEPING;
