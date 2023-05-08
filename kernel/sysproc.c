@@ -12,7 +12,7 @@ sys_exit(void)
   int n;
   argint(0, &n);
   exit(n);
-  return 0;  // not reached
+  return 0; // not reached
 }
 
 uint64
@@ -43,7 +43,7 @@ sys_sbrk(void)
 
   argint(0, &n);
   addr = myproc()->sz;
-  if(growproc(n) < 0)
+  if (growproc(n) < 0)
     return -1;
   return addr;
 }
@@ -57,8 +57,10 @@ sys_sleep(void)
   argint(0, &n);
   acquire(&tickslock);
   ticks0 = ticks;
-  while(ticks - ticks0 < n){
-    if(killed(myproc())){
+  while (ticks - ticks0 < n)
+  {
+    if (killed(myproc()))
+    {
       release(&tickslock);
       return -1;
     }
@@ -88,4 +90,42 @@ sys_uptime(void)
   xticks = ticks;
   release(&tickslock);
   return xticks;
+}
+
+uint64 sys_kthread_create(void)
+{
+  uint64 start_func, stack, stack_size;
+  argaddr(0, &start_func);
+  argaddr(1, &stack);
+  argaddr(2, &stack_size);
+  return kthread_create((void *)start_func, (void *)stack, (uint)stack_size);
+}
+
+uint64 sys_kthread_id(void)
+{
+  return kthread_id();
+}
+
+uint64 sys_kthread_kill(void)
+{
+  int tid;
+  argint(0, &tid);
+  return kthread_kill(tid);
+}
+
+uint64 sys_kthread_exit(void)
+{
+  int status;
+  argint(0, &status);
+  kthread_exit(status);
+  return 0;
+}
+
+uint64 sys_kthread_join(void)
+{
+  int tid;
+  uint64 status;
+  argint(0, &tid);
+  argaddr(1, (uint64 *)&status);
+  return kthread_join(tid, (int *)status);
 }

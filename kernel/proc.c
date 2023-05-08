@@ -733,3 +733,24 @@ void procdump(void)
     printf("\n");
   }
 }
+
+int kthread_create(void (*start_func)(), void* stack, uint stack_size){
+  return 0;
+}
+int kthread_id(void){
+  return 0;
+}
+
+int kthread_kill(int ktid){
+  return 0;
+}
+
+void kthread_exit(int status){
+  return;
+}
+
+int kthread_join(int ktid, int* status){
+  return 0;
+}
+
+
