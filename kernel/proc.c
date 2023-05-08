@@ -713,9 +713,9 @@ void procdump(void)
   static char *states[] = {
       [UNUSED] "unused",
       [USED] "used",
-      [SLEEPING] "sleep ",
-      [RUNNABLE] "runble",
-      [RUNNING] "run   ",
+      // [SLEEPING] "sleep ",
+      // [RUNNABLE] "runble",
+      // [RUNNING] "run   ",
       [ZOMBIE] "zombie"};
   struct proc *p;
   char *state;
@@ -734,23 +734,100 @@ void procdump(void)
   }
 }
 
-int kthread_create(void (*start_func)(), void* stack, uint stack_size){
+int kthread_create(void (*start_func)(), void *stack, uint stack_size)
+{
+  struct proc *p = myproc();
+  acquire(&p->lock);
+  int tid = allockthread_create(p, start_func, stack, stack_size);
+  release(&p->lock);
+  return tid;
+}
+
+int kthread_id(void)
+{
+  int tid;
+  struct proc *p = myproc();
+  acquire(&p->lock);
+  tid = mykthread()->tid;
+  release(&p->lock);
+  return tid;
+}
+// TODO: checl the effect of the killed flag
+int kthread_kill(int ktid)
+{
+  struct proc *p = myproc();
+  struct kthread *kt;
+  acquire(&p->lock);
+  for (kt = p->kthread; kt < &p->kthread[NKT]; kt++)
+  {
+    acquire(&kt->lock);
+    if (kt->tid == ktid)
+    {
+      if (kt->state == SLEEPING)
+        kt->state = RUNNABLE;
+      kt->killed = 1;
+      release(&kt->lock);
+      release(&p->lock);
+      return 0;
+    }
+    release(&kt->lock);
+  }
+  return -1;
+}
+
+void kthread_exit(int status)
+{
+  struct proc *p = myproc();
+  struct kthread *kt = mykthread();
+  acquire(&p->lock);
+  acquire(&kt->lock);
+  kt->state = ZOMBIE;
+  kt->xstate = status;
+  release(&kt->lock);
+  int flag = 1;
+
+  for (kt = p->kthread; kt < &p->kthread[NKT]; kt++)
+  {
+    acquire(&kt->lock);
+    if (kt->state != ZOMBIE || kt->state != UNUSED)
+    {
+      flag = 0;
+      release(&kt->lock);
+      break;
+    }
+    release(&kt->lock);
+  }
+
+  release(&p->lock);
+  if (flag)
+    exit(status);
+}
+
+int kthread_join(int ktid, int *status)
+{
   return 0;
-}
-int kthread_id(void){
-  return 0;
-}
+  struct kthread *kt = mykthread();
+  struct proc *p = myproc();
 
-int kthread_kill(int ktid){
-  return 0;
+  struct kthread *kt_join;
+
+  for (kt_join = p->kthread; kt_join < &p->kthread[NKT]; kt_join++)
+  {
+    acquire(&kt_join->lock);
+    if (kt_join->tid == ktid)
+    {
+      release(&kt_join->lock);
+      acquire(&kt->lock);
+      kt->state = SLEEPING;
+      kt->chan = kt_join;
+      sched();
+      kt->chan = 0;
+      *status = kt_join->xstate;
+
+      release(&kt->lock);
+      return 0;
+    }
+    release(&kt_join->lock);
+  }
+  return -1;
 }
-
-void kthread_exit(int status){
-  return;
-}
-
-int kthread_join(int ktid, int* status){
-  return 0;
-}
-
-

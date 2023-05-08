@@ -117,6 +117,7 @@ void kthreadinit(struct proc *);
 struct kthread *mykthread();
 int alloctid(struct proc *p);
 struct kthread *allockthread(struct proc *p);
+int allockthread_create(struct proc *p,void (*start_func)(), void* stack, uint stack_size);
 struct trapframe *get_kthread_trapframe(struct proc *p, struct kthread *kt);
 void freekthread(struct kthread *kt);
 

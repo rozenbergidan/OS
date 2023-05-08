@@ -59,6 +59,30 @@ struct kthread *allockthread(struct proc *p)
   return 0;
 }
 
+int allockthread_create(struct proc *p,void (*start_func)(), void* stack, uint stack_size)
+{
+  struct kthread *kt;
+  for (kt = p->kthread; kt < &p->kthread[NKT]; kt++)
+  {
+    acquire(&kt->lock); //caueses panic: sched locks
+    if (kt->state == UNUSED)
+    {
+      kt->tid = alloctid(p);
+      kt->state = RUNNABLE;
+      kt->trapframe = get_kthread_trapframe(p, kt);
+      memset(&kt->context, 0, sizeof(struct context));
+      kt->context.ra = (uint64)forkret;
+      kt->context.sp = (uint64) stack + stack_size;
+      kt->trapframe->epc = (uint64)start_func;
+      int tid = kt->tid;
+      release(&kt->lock);
+      return tid;
+    }
+    release(&kt->lock);
+  }
+  return -1;
+}
+
 struct trapframe *get_kthread_trapframe(struct proc *p, struct kthread *kt)
 {
   return p->base_trapframes + ((int)(kt - p->kthread));

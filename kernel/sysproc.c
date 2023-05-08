@@ -125,7 +125,12 @@ uint64 sys_kthread_join(void)
 {
   int tid;
   uint64 status;
+  // int returned_status;
   argint(0, &tid);
   argaddr(1, (uint64 *)&status);
-  return kthread_join(tid, (int *)status);
+  int res = kthread_join(tid, (int *)status);
+  // if(copyout(p->pagetable, status, (char *)&returned_status, sizeof(returned_status)) < 0)
+  //   return -1;
+
+  return res;
 }
