@@ -4,7 +4,6 @@
 #include "riscv.h"
 #include "spinlock.h"
 #include "proc.h"
-// #include "defs.h"
 
 struct cpu cpus[NCPU];
 
@@ -181,9 +180,7 @@ freeproc(struct proc *p)
   p->state = UNUSED;
   for (struct kthread *kt = p->kthread; kt < &p->kthread[NKT]; kt++)
   {
-    // acquire(&kt->lock);
     freekthread(kt);
-    // release(&kt->lock);
   }
 }
 
@@ -616,7 +613,6 @@ void sleep(void *chan, struct spinlock *lk)
   // so it's okay to release lk.
 
   acquire(&p->lock); // DOC: sleeplock1
-  // acquire(&p->kthread->lock); // DOC: sleeplock1
   release(lk);
 
   // Go to sleep.
@@ -630,7 +626,6 @@ void sleep(void *chan, struct spinlock *lk)
   kt->chan = 0;
 
   // Reacquire original lock.
-  // release(&p->kthread->lock);
   release(&p->lock);
   acquire(lk);
 }
@@ -657,12 +652,6 @@ void wakeup(void *chan)
         release(&kt->lock);
       }
 
-      // acquire(&p->kthread->lock);
-      // if (p->kthread->state == SLEEPING && p->kthread->chan == chan)
-      // {
-      //   p->kthread->state = RUNNABLE;
-      // }
-      // release(&p->kthread->lock);
       release(&p->lock);
     }
   }
@@ -692,13 +681,6 @@ int kill(int pid)
         }
         release(&kt->lock);
       }
-      // acquire(&p->kthread->lock);
-      // if (p->kthread->state == SLEEPING)
-      // {
-      //   // Wake process from sleep().
-      //   p->kthread->state = RUNNABLE;
-      // }
-      // release(&p->kthread->lock);
       release(&p->lock);
       return 0;
     }
@@ -766,9 +748,6 @@ void procdump(void)
   static char *states[] = {
       [UNUSED] "unused",
       [USED] "used",
-      // [SLEEPING] "sleep ",
-      // [RUNNABLE] "runble",
-      // [RUNNING] "run   ",
       [ZOMBIE] "zombie"};
   struct proc *p;
   char *state;
@@ -787,7 +766,7 @@ void procdump(void)
   }
 }
 
-int kthread_create(void (*start_func)(), void *stack, uint stack_size)
+int kthread_create(void *(*start_func)(), void *stack, uint stack_size)
 {
   struct proc *p = myproc();
   acquire(&p->lock);
@@ -805,7 +784,6 @@ int kthread_id(void)
   release(&p->lock);
   return tid;
 }
-// TODO: checl the effect of the killed flag
 int kthread_kill(int ktid)
 {
   struct proc *p = myproc();
@@ -861,7 +839,6 @@ int kthread_join(int ktid, int *status)
   return 0;
   struct kthread *kt = mykthread();
   struct proc *p = myproc();
-  printf("in join\n");
   struct kthread *kt_join;
 
   for (kt_join = p->kthread; kt_join < &p->kthread[NKT]; kt_join++)

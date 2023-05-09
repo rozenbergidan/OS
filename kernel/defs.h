@@ -106,7 +106,7 @@ void yield(void);
 int either_copyout(int user_dst, uint64 dst, void *src, uint64 len);
 int either_copyin(void *dst, int user_src, uint64 src, uint64 len);
 void procdump(void);
-int kthread_create(void (*start_func)(), void* stack, uint stack_size);
+int kthread_create(void *(*start_func)(), void* stack, uint stack_size);
 int kthread_id(void);
 int kthread_kill(int ktid);
 void kthread_exit(int status);
@@ -117,7 +117,7 @@ void kthreadinit(struct proc *);
 struct kthread *mykthread();
 int alloctid(struct proc *p);
 struct kthread *allockthread(struct proc *p);
-int allockthread_create(struct proc *p,void (*start_func)(), void* stack, uint stack_size);
+int allockthread_create(struct proc *p,void *(*start_func)(), void* stack, uint stack_size);
 struct trapframe *get_kthread_trapframe(struct proc *p, struct kthread *kt);
 void freekthread(struct kthread *kt);
 

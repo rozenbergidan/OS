@@ -2617,47 +2617,47 @@ void ulttest()
 }
 
 
-// void kthread_start_func(void){
-//   for(int i=0; i<10; i++){
-//     sleep(10); // simulate work
-//   }
-//   kthread_exit(0);
-//   printf("kthread_exit failed\n");
-//   exit(1);
-// }
+void kthread_start_func(void){
+  for(int i=0; i<10; i++){
+    sleep(10); // simulate work
+  }
+  kthread_exit(0);
+  printf("kthread_exit failed\n");
+  exit(1);
+}
 
 
-// void klttest()
-// {
-//   uint64 stack_a = (uint64)malloc(STACK_SIZE);
-//   uint64 stack_b = (uint64)malloc(STACK_SIZE);
+void klttest()
+{
+  uint64 stack_a = (uint64)malloc(STACK_SIZE);
+  uint64 stack_b = (uint64)malloc(STACK_SIZE);
 
-//   int kt_a = kthread_create((void *(*)())kthread_start_func, stack_a, STACK_SIZE);
-//   if(kt_a <= 0){
-//     printf("kthread_create failed\n");
-//     exit(1);
-//   }
-//   int kt_b = kthread_create((void *(*)())kthread_start_func, stack_b, STACK_SIZE);
-//   if(kt_a <= 0){
-//     printf("kthread_create failed\n");
-//     exit(1);
-//   }
+  int kt_a = kthread_create((void *(*)())kthread_start_func, (void*)stack_a, STACK_SIZE);
+  if(kt_a <= 0){
+    printf("kthread_create failed\n");
+    exit(1);
+  }
+  int kt_b = kthread_create((void *(*)())kthread_start_func, (void*)stack_b, STACK_SIZE);
+  if(kt_a <= 0){
+    printf("kthread_create failed\n");
+    exit(1);
+  }
 
-//   int joined = kthread_join(kt_a, 0);
-//   if(joined != 0){
-//     printf("kthread_join failed\n");
-//     exit(1);
-//   }
+  int joined = kthread_join(kt_a, 0);
+  if(joined != 0){
+    printf("kthread_join failed\n");
+    exit(1);
+  }
 
-//   joined = kthread_join(kt_b, 0);
-//   if(joined != 0){
-//     printf("kthread_join failed\n");
-//     exit(1);
-//   }
+  joined = kthread_join(kt_b, 0);
+  if(joined != 0){
+    printf("kthread_join failed\n");
+    exit(1);
+  }
 
-//   free((void *)stack_a);
-//   free((void *)stack_b);
-// }
+  free((void *)stack_a);
+  free((void *)stack_b);
+}
 
 struct test {
   void (*f)(char *);
@@ -2724,7 +2724,7 @@ struct test {
   {sbrk8000, "sbrk8000"},
   {badarg, "badarg" },
   {ulttest, "ulttest"},
-  // {klttest, "klttest"},
+  {klttest, "klttest"},
 
   { 0, 0},
 };

@@ -59,12 +59,7 @@ struct kthread *allockthread(struct proc *p)
   return 0;
 }
 
-void hellofunc(void)
-{
-  printf("Hello from a new thread!\n");
-  kthread_exit(0);
-}
-int allockthread_create(struct proc *p, void (*start_func)(), void *stack, uint stack_size)
+int allockthread_create(struct proc *p, void *(*start_func)(), void *stack, uint stack_size)
 {
   struct kthread *kt;
   for (kt = p->kthread; kt < &p->kthread[NKT]; kt++)
@@ -80,7 +75,7 @@ int allockthread_create(struct proc *p, void (*start_func)(), void *stack, uint 
       kt->context.ra = (uint64)forkret;
       kt->context.sp = (uint64)stack + stack_size;
       kt->trapframe->epc = (uint64)start_func;
-      printf("allockthread_create: kt->trapframe->epc = %p\n", start_func);
+      // printf("allockthread_create: kt->trapframe->epc = %p\n", start_func);
       int tid = kt->tid;
       release(&kt->lock);
       return tid;
