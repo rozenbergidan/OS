@@ -509,19 +509,27 @@ void scheduler(void)
         // Switch to chosen process.  It is the process's job
         // to release its lock and then reacquire it
         // before jumping back to us.
-        // acquire(&p->kthread->lock);
-        if (p->kthread->state == RUNNABLE)
+        for(struct kthread *kt = p->kthread; kt < &p->kthread[NKT]; kt++)
         {
-          p->kthread->state = RUNNING;
-          c->proc = p;
-          c->kthread = p->kthread;
-          swtch(&c->context, &p->kthread->context);
+          acquire(&kt->lock);
+          if (kt->state == RUNNABLE)
+          {
+            kt->state = RUNNING;
+            c->proc = p;
+            c->kthread = kt;
+            release(&kt->lock);
+            swtch(&c->context, &kt->context);
+          }
+          else
+          {
+            release(&kt->lock);
+          }
+          c->kthread = 0;
         }
-        // release(&p->kthread->lock);
+
         // Process is done running for now.
         // It should have changed its p->state before coming back.
         c->proc = 0;
-        c->kthread = 0;
       }
       release(&p->lock);
     }
@@ -539,6 +547,7 @@ void sched(void)
 {
   int intena;
   struct proc *p = myproc();
+  struct kthread *kt = mykthread();
 
   if (!holding(&p->lock))
     panic("sched p->lock");
@@ -550,7 +559,7 @@ void sched(void)
     panic("sched interruptible");
 
   intena = mycpu()->intena;
-  swtch(&p->kthread->context, &mycpu()->context);
+  swtch(&kt->context, &mycpu()->context);
   mycpu()->intena = intena;
 }
 
@@ -558,9 +567,10 @@ void sched(void)
 void yield(void)
 {
   struct proc *p = myproc();
+  struct kthread *kt = mykthread();
   acquire(&p->lock);
   // acquire(&p->kthread->lock);
-  p->kthread->state = RUNNABLE;
+  kt->state = RUNNABLE;
   sched();
   // release(&p->kthread->lock);
   release(&p->lock);
@@ -593,6 +603,7 @@ void forkret(void)
 void sleep(void *chan, struct spinlock *lk)
 {
   struct proc *p = myproc();
+  struct kthread *kt = mykthread();
 
   // Must acquire p->lock in order to
   // change p->state and then call sched.
@@ -606,13 +617,14 @@ void sleep(void *chan, struct spinlock *lk)
   release(lk);
 
   // Go to sleep.
-  p->kthread->chan = chan;
-  p->kthread->state = SLEEPING;
-
+  acquire(&kt->lock);
+  kt->chan = chan;
+  kt->state = SLEEPING;
+  release(&kt->lock);
   sched();
 
   // Tidy up.
-  p->kthread->chan = 0;
+  kt->chan = 0;
 
   // Reacquire original lock.
   // release(&p->kthread->lock);

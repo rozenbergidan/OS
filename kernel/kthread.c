@@ -26,7 +26,7 @@ void kthreadinit(struct proc *p)
 
 struct kthread *mykthread()
 {
-  return &myproc()->kthread[0];
+  return mycpu()->kthread;
 }
 
 int alloctid(struct proc *p)
@@ -43,7 +43,7 @@ struct kthread *allockthread(struct proc *p)
   struct kthread *kt;
   for (kt = p->kthread; kt < &p->kthread[NKT]; kt++)
   {
-    acquire(&kt->lock); //caueses panic: sched locks
+    acquire(&kt->lock); // caueses panic: sched locks
     if (kt->state == UNUSED)
     {
       kt->tid = alloctid(p);
@@ -59,20 +59,21 @@ struct kthread *allockthread(struct proc *p)
   return 0;
 }
 
-int allockthread_create(struct proc *p,void (*start_func)(), void* stack, uint stack_size)
+int allockthread_create(struct proc *p, void (*start_func)(), void *stack, uint stack_size)
 {
   struct kthread *kt;
   for (kt = p->kthread; kt < &p->kthread[NKT]; kt++)
   {
-    acquire(&kt->lock); //caueses panic: sched locks
+    acquire(&kt->lock); // caueses panic: sched locks
     if (kt->state == UNUSED)
     {
       kt->tid = alloctid(p);
       kt->state = RUNNABLE;
+      // kt->kstack = (uint64)stack;
       kt->trapframe = get_kthread_trapframe(p, kt);
       memset(&kt->context, 0, sizeof(struct context));
       kt->context.ra = (uint64)forkret;
-      kt->context.sp = (uint64) stack + stack_size;
+      kt->context.sp = (uint64)stack + stack_size;
       kt->trapframe->epc = (uint64)start_func;
       int tid = kt->tid;
       release(&kt->lock);
@@ -99,7 +100,6 @@ void freekthread(struct kthread *kt)
   kt->xstate = 0;
   kt->tid = 0;
   // kt->kstack = 0;
-
 }
 
 // TODO: delte this after you are done with task 2.2
