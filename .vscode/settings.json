@@ -4,6 +4,7 @@
         "riscv.h": "c",
         "defs.h": "c",
         "memlayout.h": "c",
-        "proc.h": "c"
+        "proc.h": "c",
+        "elf.h": "c"
     },
 }

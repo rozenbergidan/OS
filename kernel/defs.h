@@ -122,7 +122,7 @@ struct trapframe *get_kthread_trapframe(struct proc *p, struct kthread *kt);
 void freekthread(struct kthread *kt);
 
 // TODO: delte this after you are done with task 2.2
-void allocproc_help_function(struct proc *p);
+// void allocproc_help_function(struct proc *p);
 
 // swtch.S
 void swtch(struct context *, struct context *);

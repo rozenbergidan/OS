@@ -861,7 +861,7 @@ int kthread_join(int ktid, int *status)
   return 0;
   struct kthread *kt = mykthread();
   struct proc *p = myproc();
-
+  printf("in join\n");
   struct kthread *kt_join;
 
   for (kt_join = p->kthread; kt_join < &p->kthread[NKT]; kt_join++)

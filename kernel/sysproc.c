@@ -92,13 +92,34 @@ sys_uptime(void)
   return xticks;
 }
 
+// void hellofunc(void)
+// {
+//   printf("Hello from a new thread!\n");
+//   kthread_exit(0);
+// }
+
 uint64 sys_kthread_create(void)
 {
-  uint64 start_func, stack, stack_size;
+  uint64 stack, stack_size, start_func;
   argaddr(0, &start_func);
   argaddr(1, &stack);
   argaddr(2, &stack_size);
-  return kthread_create((void *)start_func, (void *)stack, (uint)stack_size);
+
+  uint64 user_function_address;
+  if (fetchaddr(start_func, &user_function_address) < 0)
+  {
+    printf("failed to fetch user_function_address\n");
+    return -1;
+  }
+  // if (fetchaddr(stack, &stack_ptr) < 0)
+  // {
+  //   printf("failed to fetch stack_ptr\n");
+  //   return -1;
+  // }
+
+  printf("fetchaddr(start_func, &user_function_address) = %p\n", user_function_address);
+  printf("fetchaddr(stack, &stack) = %p\n", stack);
+  return kthread_create(((void (*)())user_function_address), (void *)stack, (uint)stack_size);
 }
 
 uint64 sys_kthread_id(void)
