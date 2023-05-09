@@ -370,7 +370,7 @@ void exit(int status)
 {
   struct proc *p = myproc();
 
-   for (struct kthread *kt = p->kthread; kt < &p->kthread[NKT]; kt++)
+  for (struct kthread *kt = p->kthread; kt < &p->kthread[NKT]; kt++)
   {
     acquire(&kt->lock);
     if (kt->state != ZOMBIE || kt->state != UNUSED)
@@ -509,7 +509,7 @@ void scheduler(void)
         // Switch to chosen process.  It is the process's job
         // to release its lock and then reacquire it
         // before jumping back to us.
-        for(struct kthread *kt = p->kthread; kt < &p->kthread[NKT]; kt++)
+        for (struct kthread *kt = p->kthread; kt < &p->kthread[NKT]; kt++)
         {
           acquire(&kt->lock);
           if (kt->state == RUNNABLE)
@@ -569,10 +569,13 @@ void yield(void)
   struct proc *p = myproc();
   struct kthread *kt = mykthread();
   acquire(&p->lock);
-  // acquire(&p->kthread->lock);
+
+  acquire(&kt->lock);
   kt->state = RUNNABLE;
+  release(&kt->lock);
+
   sched();
-  // release(&p->kthread->lock);
+
   release(&p->lock);
 }
 
@@ -643,12 +646,23 @@ void wakeup(void *chan)
     if (p != myproc())
     {
       acquire(&p->lock);
-      acquire(&p->kthread->lock);
-      if (p->kthread->state == SLEEPING && p->kthread->chan == chan)
+
+      for (struct kthread *kt = p->kthread; kt < &p->kthread[NKT]; kt++)
       {
-        p->kthread->state = RUNNABLE;
+        acquire(&kt->lock);
+        if (kt->state == SLEEPING && kt->chan == chan)
+        {
+          kt->state = RUNNABLE;
+        }
+        release(&kt->lock);
       }
-      release(&p->kthread->lock);
+
+      // acquire(&p->kthread->lock);
+      // if (p->kthread->state == SLEEPING && p->kthread->chan == chan)
+      // {
+      //   p->kthread->state = RUNNABLE;
+      // }
+      // release(&p->kthread->lock);
       release(&p->lock);
     }
   }
@@ -667,13 +681,24 @@ int kill(int pid)
     if (p->pid == pid)
     {
       p->killed = 1;
-      acquire(&p->kthread->lock);
-      if (p->kthread->state == SLEEPING)
+
+      for(struct kthread *kt = p->kthread; kt < &p->kthread[NKT]; kt++)
       {
-        // Wake process from sleep().
-        p->kthread->state = RUNNABLE;
+        acquire(&kt->lock);
+        if (kt->state == SLEEPING)
+        {
+          // Wake process from sleep().
+          kt->state = RUNNABLE;
+        }
+        release(&kt->lock);
       }
-      release(&p->kthread->lock);
+      // acquire(&p->kthread->lock);
+      // if (p->kthread->state == SLEEPING)
+      // {
+      //   // Wake process from sleep().
+      //   p->kthread->state = RUNNABLE;
+      // }
+      // release(&p->kthread->lock);
       release(&p->lock);
       return 0;
     }

@@ -69,7 +69,7 @@ int allockthread_create(struct proc *p, void (*start_func)(), void *stack, uint 
     {
       kt->tid = alloctid(p);
       kt->state = RUNNABLE;
-      // kt->kstack = (uint64)stack;
+      kt->kstack = (uint64)stack;
       kt->trapframe = get_kthread_trapframe(p, kt);
       memset(&kt->context, 0, sizeof(struct context));
       kt->context.ra = (uint64)forkret;
