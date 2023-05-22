@@ -13,7 +13,8 @@ void main()
     *b = 6;
     printf("b = %d\n", *b);
 
-    ustack_free();
+    int freed_memory = ustack_free();
+    printf("freed memory = %d\n", freed_memory);
     printf("b = %d\n", *b);
 
     int *c = (int *)ustack_malloc(4);
@@ -21,7 +22,10 @@ void main()
     *c = 7;
     printf("c = %d\n", *c);
     printf("b = %d\n", *b);
-
+    freed_memory = ustack_free();
+    printf("freed memory = %d\n", freed_memory);
+    // freed_memory = ustack_free();
+    // printf("freed memory = %d\n", freed_memory);
 
     printf("malloc, world!\n");
     int *_a = (int *)malloc(4);
@@ -41,6 +45,6 @@ void main()
     *_c = 7;
     printf("c = %d\n", *_c);
     printf("b = %d\n", *_b);
-    
+
     printf("done\n");
 }

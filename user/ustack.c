@@ -13,8 +13,8 @@ typedef union ustack_header
 
 static UstackHeader base;
 static UstackHeader *freep;
-static void* lastToFree;
-static void* ap;
+static void *lastToFree;
+static void *ap;
 static int flagToFree = 0;
 
 // void _free(void *ap)
@@ -41,16 +41,16 @@ static UstackHeader *morecore(uint nunits)
     return freep;
 }
 
-
 void *ustack_malloc(uint len)
 {
 
     UstackHeader *currentPtr, *prevPtr;
     uint nunits;
-    if(len > 512){
+    if (len > 512)
+    {
         return (void *)-1;
     }
-    
+
     nunits = (len + sizeof(UstackHeader) - 1) / sizeof(UstackHeader) + 1;
     if ((prevPtr = freep) == 0)
     {
@@ -80,39 +80,60 @@ void *ustack_malloc(uint len)
                 }
                 freep = prevPtr;
                 lastToFree = currentPtr;
-            
+
                 return (void *)(currentPtr + 1);
             }
         }
     }
 }
 
-void ustack_free(void)
+int ustack_free(void)
 {
-    UstackHeader *basePointer, *currPointer;
-    if(flagToFree == 1){                    // internal free???
-        basePointer = (UstackHeader*)ap -1;
-    }
-    else{
-        basePointer = (UstackHeader*)lastToFree -1; // api free
-    }
-    for(currPointer = freep; !(basePointer > currPointer && basePointer < currPointer->s.ptr); currPointer = currPointer->s.ptr)
-    if(currPointer >= currPointer->s.ptr && (basePointer > currPointer || basePointer < currPointer->s.ptr))
-      break;
+    // char *p;
+    UstackHeader *bufferPointer, *currPointer;
+    int freed_size = 0;
 
-  if(basePointer + basePointer->s.size == currPointer->s.ptr){ // if the blocks are adjuscent - merging their size and ptr
-    basePointer->s.size += currPointer->s.ptr->s.size;
-    basePointer->s.ptr = currPointer->s.ptr->s.ptr;
-  } else // if blocks are not ajuscent - just changing the pointer to follow the next block
-    basePointer->s.ptr = currPointer->s.ptr;
-  if(currPointer + currPointer->s.size == basePointer){  // if the base block is just before the current header - merging their size and ptr
-    currPointer->s.size += basePointer->s.size;
-    currPointer->s.ptr = basePointer->s.ptr;
-  } else
-    currPointer->s.ptr = basePointer;
-  freep = currPointer;
+    if (flagToFree == 1)
+    { // internal free???
+        bufferPointer = (UstackHeader *)ap - 1;
+    }
+    else
+    {
+        bufferPointer = (UstackHeader *)lastToFree - 1; // api free
+    }
+
+    if (freep == 0)
+    { // trying to free empty list
+        return -1;
+    }
+    freed_size = bufferPointer->s.size * sizeof(UstackHeader);
+    for (currPointer = freep; !(bufferPointer > currPointer && bufferPointer < currPointer->s.ptr); currPointer = currPointer->s.ptr)
+        if (currPointer >= currPointer->s.ptr && (bufferPointer > currPointer || bufferPointer < currPointer->s.ptr))
+            break;
+
+    if (bufferPointer + bufferPointer->s.size == currPointer->s.ptr)
+    { // if the blocks are adjuscent - merging their size and ptr
+        bufferPointer->s.size += currPointer->s.ptr->s.size;
+        bufferPointer->s.ptr = currPointer->s.ptr->s.ptr;
+    }
+    else // if blocks are not ajuscent - just changing the pointer to follow the next block
+        bufferPointer->s.ptr = currPointer->s.ptr;
+    if (currPointer + currPointer->s.size == bufferPointer)
+    { // if the base block is just before the current header - merging their size and ptr
+        currPointer->s.size += bufferPointer->s.size;
+        currPointer->s.ptr = bufferPointer->s.ptr;
+    }
+    else
+        currPointer->s.ptr = bufferPointer;
+
+    freep = currPointer;
+    // if(freep == &base){
+    // p = sbrk(-(freep->s.size * sizeof(UstackHeader)));
+    // if (p == (char *)-1)
+    //     return -1;
+    // }
+    return freed_size;
 }
-
 
 void print_ustack(void)
 {
