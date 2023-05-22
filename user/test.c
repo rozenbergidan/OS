@@ -3,45 +3,44 @@
 
 void main()
 {
-    int *a = (int *)ustack_malloc(512);
-    int *b = (int *)ustack_malloc(512);
-    int *c = (int *)ustack_malloc(512);
-    int *d = (int *)ustack_malloc(512);
-    int *e = (int *)ustack_malloc(512);
-    int *f = (int *)ustack_malloc(512);
-    int *g = (int *)ustack_malloc(512);
-    int *h = (int *)ustack_malloc(512);
+    printf("ustack, world!\n");
+    int *a = (int *)ustack_malloc(4);
     printf("a = %d\n", *a);
+    *a = 5;
+    printf("a = %d\n", *a);
+    int *b = (int *)ustack_malloc(4);
     printf("b = %d\n", *b);
+    *b = 6;
+    printf("b = %d\n", *b);
+
+    ustack_free();
+    printf("b = %d\n", *b);
+
+    int *c = (int *)ustack_malloc(4);
     printf("c = %d\n", *c);
-    printf("d = %d\n", *d);
-    printf("e = %d\n", *e);
-    printf("f = %d\n", *f);
-    printf("g = %d\n", *g);
-    printf("h = %d\n", *h);
-    // printf("a = %d\n", *a);
-    // *a = 5;
-    // printf("a = %d\n", *a);
-    // // ustack_free();
-    // int *b = (int *)ustack_malloc(4);
-    // printf("b = %d\n", *b);
-    // *b = 6;
-    // printf("b = %d\n", *b);
-    // printf("a = %d\n", *a);
+    *c = 7;
+    printf("c = %d\n", *c);
+    printf("b = %d\n", *b);
 
-    print_ustack();
-    // ustack_free();
-    // printf("b = %d\n", *b);
-    // printf("b = %d\n", *b);
-    // int *c = (int *)ustack_malloc(4);
-    // printf("b = %d\n", *b);    
-    // printf("c = %d\n", *c);
 
-    // int *c = (int*)ustack_malloc(4);
-    // *c = 7;
-    // ustack_free();
-    // ustack_free();
-    // ustack_free();
+    printf("malloc, world!\n");
+    int *_a = (int *)malloc(4);
+    printf("a = %d\n", *_a);
+    *_a = 5;
+    printf("a = %d\n", *_a);
+    int *_b = (int *)malloc(4);
+    printf("b = %d\n", *_b);
+    *_b = 6;
+    printf("b = %d\n", *_b);
+
+    free(b);
+    printf("b = %d\n", *_b);
+
+    int *_c = (int *)malloc(4);
+    printf("c = %d\n", *_c);
+    *_c = 7;
+    printf("c = %d\n", *_c);
+    printf("b = %d\n", *_b);
+    
     printf("done\n");
-    // print_ustack();
 }
