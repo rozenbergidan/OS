@@ -21,7 +21,7 @@ typedef union header Header;
 static Header base;
 static Header *freep;
 
-/// @brief allocate memory of size nbytes
+/// @brief deallocate memory of size nbytes
 /// @param addressPointer 
 void
 free(void *addressPointer)
@@ -32,6 +32,7 @@ free(void *addressPointer)
   for(currPointer = freep; !(basePointer > currPointer && basePointer < currPointer->s.ptr); currPointer = currPointer->s.ptr)
     if(currPointer >= currPointer->s.ptr && (basePointer > currPointer || basePointer < currPointer->s.ptr))
       break;
+
   if(basePointer + basePointer->s.size == currPointer->s.ptr){ // if the blocks are adjuscent - merging their size and ptr
     basePointer->s.size += currPointer->s.ptr->s.size;
     basePointer->s.ptr = currPointer->s.ptr->s.ptr;
