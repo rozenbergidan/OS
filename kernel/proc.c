@@ -124,6 +124,9 @@ allocproc(void)
 found:
   p->pid = allocpid();
   p->state = USED;
+  //init the process's fields
+  p->countPhysicalPages = 0;
+  p->countTotalPages = 0;
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
@@ -201,7 +204,9 @@ proc_pagetable(struct proc *p)
     uvmfree(pagetable, 0);
     return 0;
   }
-
+  //
+  p->countTotalPages += 1;
+  p->countPhysicalPages += 1;
   return pagetable;
 }
 
