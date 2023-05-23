@@ -50,8 +50,8 @@ void *ustack_malloc(uint len)
     struct ustack_header *p;
     if (len == 0)
     {
-
-        uint nunits = (len + sizeof(struct ustack_header) - 1) / sizeof(struct ustack_header) + 1;
+        printf("len is 0\n");
+        uint nunits = (len + sizeof(struct ustack_header)) / sizeof(struct ustack_header);
         len = nunits * sizeof(struct ustack_header);
         // allocate the memory
         p = morecore(nunits);
@@ -94,15 +94,19 @@ void *ustack_malloc(uint len)
 
 int ustack_free(void)
 {
+
     // free last and update last to be the previous header
     if (last == 0)
     {
         return -1;
     }
+    // printf("len is more then 0. last->len = %d\n", last->len);
     struct ustack_header *p = last;
     int freed_space = p->len;
     last = last->prev;
-    sbrk(-(p->len * sizeof(struct ustack_header)));
+    // printf("callsing sbrk with -%d\n", p->len);
+    sbrk(-(p->len));
+    // printf("after sbrk = %d\n", freed_space);
     if(freed_space == 0) {
         return -1;
     }

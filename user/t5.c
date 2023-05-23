@@ -17,11 +17,12 @@ void main()
     printf("freed memory = %d\n", freed_memory);
     printf("b = %d\n", *b);
 
-    int *c = (int *)ustack_malloc(1000);
+    int *c = (int *)ustack_malloc(512);
     printf("c = %d\n", *c);
     *c = 7;
     printf("c = %d\n", *c);
     printf("b = %d\n", *b);
+    
     freed_memory = ustack_free();
     printf("freed memory = %d\n", freed_memory);
     freed_memory = ustack_free();
