@@ -18,7 +18,7 @@ static struct ustack_header *last = 0;
 
 static struct ustack_header *morecore(uint nunits)
 {
-    int size = nunits * sizeof(struct ustack_header) + 1;
+    int size =  (nunits + sizeof(struct ustack_header) - 1) / sizeof(struct ustack_header) + 1;
     char *p = sbrk(size);
     if (p == (char *)-1)
     {
