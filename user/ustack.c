@@ -18,8 +18,8 @@ static struct ustack_header *last = 0;
 
 static struct ustack_header *morecore(uint nunits)
 {
-    int size =  (nunits + sizeof(struct ustack_header) - 1) / sizeof(struct ustack_header) + 1;
-    char *p = sbrk(size);
+    // int size = (nunits + sizeof(struct ustack_header) - 1) / sizeof(struct ustack_header) + 1;
+    char *p = sbrk(nunits);
     if (p == (char *)-1)
     {
         return 0;
@@ -40,7 +40,7 @@ void *ustack_malloc(uint len)
         last->prev = 0;
         last->len = 0;
     }
-    //check if len is bigger then 512
+    // check if len is bigger then 512
     if (len > 512)
     {
         return (void *)-1;
@@ -48,13 +48,12 @@ void *ustack_malloc(uint len)
     // calculate how meny units we need to allocate
 
     struct ustack_header *p;
-    if (len == 0)
+    if (last->len + len > 4096)
     {
-        printf("len is 0\n");
-        uint nunits = (len + sizeof(struct ustack_header)) / sizeof(struct ustack_header);
+        uint nunits = (len + sizeof(struct ustack_header) - 1) / sizeof(struct ustack_header) + 1;
         len = nunits * sizeof(struct ustack_header);
         // allocate the memory
-        p = morecore(nunits);
+        p = morecore(len);
         if (p == 0)
         {
             return (void *)-1;
@@ -64,32 +63,16 @@ void *ustack_malloc(uint len)
         last = p;
         // return the pointer to the start of the allocated memory
         return (void *)(p + 1);
-
     }
-    else {
-        if(last->len + len > 4096) {
-            uint nunits = (len + sizeof(struct ustack_header) - 1) / sizeof(struct ustack_header) + 1;
-            len = nunits * sizeof(struct ustack_header);
-            // allocate the memory
-            p = morecore(nunits);
-            if (p == 0)
-            {
-                return (void *)-1;
-            }
-
-            // update last to the new allocated memory
-            last = p;
-            // return the pointer to the start of the allocated memory
-            return (void *)(p + 1);
-        }
-        else {
-            p = last;
-            last = last + len;
-            last->prev = p;
-            last->len = len;
-            return (void *)(p + 1);
-        }
+    else
+    {
+        p = last;
+        last = last + len;
+        last->prev = p;
+        last->len = len;
+        return (void *)(p + 1);
     }
+    // }
 }
 
 int ustack_free(void)
@@ -105,9 +88,10 @@ int ustack_free(void)
     int freed_space = p->len;
     last = last->prev;
     // printf("callsing sbrk with -%d\n", p->len);
-    sbrk(-(p->len));
+    char *psbrk = sbrk(-(p->len));
     // printf("after sbrk = %d\n", freed_space);
-    if(freed_space == 0) {
+    if (psbrk == (char *)-1 || freed_space == 0)
+    {
         return -1;
     }
     return freed_space;
