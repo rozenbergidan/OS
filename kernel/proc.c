@@ -127,6 +127,7 @@ found:
   //init the process's fields
   p->countPhysicalPages = 0;
   p->countTotalPages = 0;
+  p->offsetInSwapFile = 0;
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
@@ -148,7 +149,7 @@ found:
   memset(&p->context, 0, sizeof(p->context));
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
-
+  memset(&p->pages_va, 0, sizeof(p->pages_va));
   return p;
 }
 
@@ -172,6 +173,7 @@ freeproc(struct proc *p)
   p->killed = 0;
   p->xstate = 0;
   p->state = UNUSED;
+  p->swapFile = 0;
 }
 
 // Create a user page table for a given process, with no user memory,

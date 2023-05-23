@@ -106,6 +106,7 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
-
   struct file *swapFile;
+  uint64 pages_va[16];
+  uint offsetInSwapFile;
 };
