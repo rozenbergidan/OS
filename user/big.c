@@ -3,7 +3,8 @@
 
 void main(int argc, char **argv)
 {
-
+    // void* ptr = malloc(100);
+    // printf("ptr: %p\n", ptr);
     int howmany = 0;
     if (argc > 1)
     {

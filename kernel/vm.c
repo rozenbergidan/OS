@@ -259,7 +259,7 @@ uvmalloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz, int xperm)
       uvmdealloc(pagetable, va, oldsz);
       return 0;
     }
-    addUserPage(p, oldsz);
+    addUserPage(p, va);
   }
   return newsz;
 }

@@ -17,7 +17,6 @@ struct spinlock pid_lock;
 
 extern void forkret(void);
 static void freeproc(struct proc *p);
-int swapIfneeded(struct proc *p, int index);
 
 extern char trampoline[]; // trampoline.S
 
@@ -111,10 +110,7 @@ void initPages(struct proc *p)
 
 void freePages(struct proc *p)
 {
-  // release(&p->lock);
-  // removeSwapFile(p);
   p->swapFile = 0;
-  // acquire(&p->lock);
 }
 
 int addUserPage(struct proc *p, uint64 va)
@@ -133,9 +129,10 @@ int addUserPage(struct proc *p, uint64 va)
   {
     if (p->pages[index].isUsed == 0)
     {
-      p->pages[index].va = PGROUNDDOWN(va);
-      p->pages[index].pa = walkaddr(p->pagetable, p->pages[index].va);
+      p->pages[index].va = va;
       p->pages[index].isUsed = 1;
+      p->pages[index].pte = walk(p->pagetable, p->pages[index].va, 1);
+      p->pages[index].pa = PTE2PA(*p->pages[index].pte);
       p->countTotalPages++;
       p->countPhysicalPages++;
       break;
@@ -288,6 +285,19 @@ proc_pagetable(struct proc *p)
   return pagetable;
 }
 
+
+int swapIn(struct proc* p, pte_t* pte){
+  uint64 pa = PTE2PA(*pte);
+  for(int i=0; i< MAX_TOTAL_PAGES; i++){
+    if(p->pages[i].pa == pa){
+      p->pages[i].isUsed = 1;
+      readFromSwapFile(p, (char*)pa, p->pages[i].offsetInFile, PGSIZE);
+      mappages(p->pagetable, p->pages[i].va, PGSIZE, pa, PTE_W | PTE_R | PTE_X | PTE_U);
+      return i;
+    }
+  }
+  return -1;
+}
 // Free a process's page table, and free the
 // physical memory it refers to.
 void proc_freepagetable(pagetable_t pagetable, uint64 sz)
