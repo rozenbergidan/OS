@@ -79,6 +79,14 @@ struct trapframe {
   /* 280 */ uint64 t6;
 };
 
+struct procPage {
+  uint64 va;
+  uint64 pa;
+  pte_t *pte;
+  int isUsed; //0 not, 1 yes
+  uint offsetInFile;
+};
+
 enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
 // Per-process state
@@ -107,6 +115,6 @@ struct proc {
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
   struct file *swapFile;
-  uint64 pages_va[16];
+  struct procPage pages[MAX_TOTAL_PAGES];
   uint offsetInSwapFile;
 };

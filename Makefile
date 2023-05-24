@@ -134,7 +134,8 @@ UPROGS=\
 	$U/_zombie\
 	$U/_test\
 	$U/_t5\
-
+	$U/_big\
+	
 fs.img: mkfs/mkfs README $(UPROGS)
 	mkfs/mkfs fs.img README $(UPROGS)
 

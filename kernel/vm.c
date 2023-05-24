@@ -13,7 +13,6 @@
  * the kernel's page table.
  */
 pagetable_t kernel_pagetable;
-void swap_policy(struct proc *p, uint64 va);
 
 extern char etext[]; // kernel.ld sets this to end of kernel code.
 
@@ -223,8 +222,9 @@ void uvmfirst(pagetable_t pagetable, uchar *src, uint sz)
   memset(mem, 0, PGSIZE);
   mappages(pagetable, 0, PGSIZE, (uint64)mem, PTE_W | PTE_R | PTE_X | PTE_U);
   // allocating a page and mapping it to the first page of the page table
-  // myproc()->pages_va[0] = 0;
   memmove(mem, src, sz);
+  // struct proc *p = myproc();
+  // addUserPage(p, 0, mem);
 }
 
 // Allocate PTEs and physical memory to grow process from oldsz to
@@ -235,21 +235,15 @@ uvmalloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz, int xperm)
   char *pa;
   uint64 va;
   struct proc *p = myproc();
-  int currentNumOFPysPages = p->countPhysicalPages;
-  int currentTotal = p->countTotalPages;
-  int pid = p->pid;
-  printf("currentNumOFPysPages of proc %d: %d\n", pid, currentNumOFPysPages);
-  printf("currentTotalOfProcPages of proc %d: %d\n", pid, currentTotal);
-  if (currentTotal + 1 > MAX_TOTAL_PAGES)
-  {
-    return 0;
-  }
-
+  // int currentNumOFPysPages = p->countPhysicalPages;
+  // int currentTotal = p->countTotalPages;
+  // int pid = p->pid;
+  // printf("currentNumOFPysPages of proc %d: %d\n", pid, currentNumOFPysPages);
+  // printf("currentTotalOfProcPages of proc %d: %d\n", pid, currentTotal);
   if (newsz < oldsz)
     return oldsz;
 
   oldsz = PGROUNDUP(oldsz);
-  uint64 _va= oldsz;
   for (va = oldsz; va < newsz; va += PGSIZE)
   {
     pa = kalloc();
@@ -265,36 +259,25 @@ uvmalloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz, int xperm)
       uvmdealloc(pagetable, va, oldsz);
       return 0;
     }
-   
+    addUserPage(p, oldsz);
   }
-   if(p->swapFile == 0)
-      createSwapFile(p);
-    if (p->countPhysicalPages + 1 > MAX_PSYC_PAGES)
-    {
-      swap_policy(p, _va);
-      p->countTotalPages++;
-    }
-    else
-    {
-      for(int i = 1; i < MAX_PSYC_PAGES; i++){
-        if(p->pages_va[i] == 0){
-          p->pages_va[i] = _va;
-          break;
-        }
-      }
-      p->countPhysicalPages++;
-      p->countTotalPages++;
-    }
   return newsz;
 }
 
-void swap_policy(struct proc *p, uint64 va)
-{
-
-  writeToSwapFile(p, (char *)p->pages_va[1], p->offsetInSwapFile, PGSIZE);
-  p->pages_va[1] = va;
-  p->offsetInSwapFile += PGSIZE;
-}
+// void swap_policy(struct proc *p, uint64 va)
+// {
+//   uint64 oldva = p->pages_va[1];
+//   uint64 walked = walkaddr(p->pagetable, oldva);
+//   writeToSwapFile(p, (char *)walked, p->offsetInSwapFile, PGSIZE);
+//   uint64 level2pte = PX(2, oldva); // got the index of the second level page table of the pte to set off.
+//   pte_t *pte = (pte_t*)p->pagetable[level2pte]; // got second level page table entry
+//   //set PTE_V flag to 0
+//   *pte &= ~PTE_V; // set PTE_V flag to 0
+//   oldva |= PTE_PRESENT_FLAG; // set our present flag to 1
+//   p->pages_va[1] = va; //swap the pages to the new page address
+//   p->offsetInSwapFile += PGSIZE;
+//   kfree((void *)PTE2PA(*pte)); // free the physical page
+// }
 
 // Deallocate user pages to bring the process size from oldsz to
 // newsz.  oldsz and newsz need not be page-aligned, nor does newsz
