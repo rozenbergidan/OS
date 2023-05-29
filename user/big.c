@@ -11,10 +11,16 @@ void main(int argc, char **argv)
         howmany = atoi(argv[1]);
     }
 
-    void *pointers[howmany];
+    int *pointers[howmany];
     for (int i = 0; i < howmany; i++)
     {
-        pointers[i] = malloc(100);
+        pointers[i] = (int*) malloc(1024);
+        *pointers[i] = i;
+    }
+
+    for(int i = 0; i < howmany; i++)
+    {
+        printf("pointers[%d]: %p\n", *pointers[i], pointers[i]);
     }
 
     if (argc > 2)
@@ -22,7 +28,7 @@ void main(int argc, char **argv)
         howmany = atoi(argv[2]);
         if (howmany == 1)
         {
-            for (int i = 0; i < 100; i++)
+            for (int i = 0; i < howmany; i++)
             {
                 free(pointers[i]);
             }

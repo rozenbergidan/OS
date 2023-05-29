@@ -83,6 +83,7 @@ void usertrap(void)
       {
         // need to allocate it from the swap file offset
         // need to map it to the page table
+        printf("swaooung in page\n");
         int index = swapIn(p, pte);
         // need to validated it doesn't pass the maximum number of phsical pages - if so swapped something else
         if (index != -1)
