@@ -115,7 +115,7 @@ void freePages(struct proc *p)
 
 int validate_process_name(struct proc *p)
 {
-  if (strncmp(p->name, "initcode", sizeof("initcode")) == 0 || strncmp(p->name, "init", sizeof("init")) == 0)
+  if (strncmp(p->name, "initcode", sizeof("initcode")) == 0 || strncmp(p->name, "init", sizeof("init")) == 0 || p->pid < 3)
   {
     return 0;
   }
@@ -138,7 +138,7 @@ int addUserPage(struct proc *p, uint64 va)
   int index = 0;
   for (; index < MAX_TOTAL_PAGES; index++)
   {
-    if (p->pages[index].isUsed == 0)
+    if (p->pages[index].isUsed == 0 && p->pages[index].pte == 0)
     {
       p->pages[index].va = va;
       p->pages[index].isUsed = 1;
@@ -165,7 +165,7 @@ int swapIfneeded(struct proc *p, int index)
     // take one of the used pages and move it to the swap file
     for (int i = 1; i < MAX_TOTAL_PAGES; i++)
     {
-      pte_t *pte = walk(p->pagetable, p->pages[i].va, 0);
+      // pte_t *pte = (pte_t *)walkaddr(p->pagetable, p->pages[i].va);
       if (i != index && p->pages[i].isUsed == 1)
       {
         // write the page to the swap file and update the page table entry
@@ -173,7 +173,8 @@ int swapIfneeded(struct proc *p, int index)
         p->countPhysicalPages--;
         p->pages[i].isUsed = 0;
         // turn off the pte_v bit
-        *pte = *pte & ~PTE_V;
+        pte_t *pte = p->pages[i].pte;
+        *pte = *pte | PTE_PG;
         // TODO: need to free the page woith kfree
         // update the offset
         p->pages[i].offsetInFile = p->offsetInSwapFile;
@@ -307,16 +308,19 @@ int swapIn(struct proc *p, pte_t *pte, uint64 stval)
     return 0;
   }
   uint64 va = PGROUNDDOWN(stval);
-  uint64 pa = PTE2PA(*pte);
+  // uint64 pa = PTE2PA(*pte);
 
   for (int i = 0; i < MAX_TOTAL_PAGES; i++)
   {
     struct procPage *page = &p->pages[i];
     if (page->va == va)
     {
+      // printf("swap in page, stavl: %d\n", va);
       p->pages[i].isUsed = 1;
-      readFromSwapFile(p, (char *)pa, p->pages[i].offsetInFile, PGSIZE);
-      mappages(p->pagetable, p->pages[i].va, PGSIZE, pa, PTE_W | PTE_R | PTE_X | PTE_U);
+      readFromSwapFile(p, (char *)p->pages[i].pa, p->pages[i].offsetInFile, PGSIZE);
+      *pte = *pte & ~PTE_V;
+      // mappages(p->pagetable, p->pages[i].va, PGSIZE, PTE2PA(*pte), PTE_W | PTE_R | PTE_X | PTE_U);
+      *pte = *pte | PTE_V;
       return i;
     }
   }
