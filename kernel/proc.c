@@ -113,9 +113,20 @@ void freePages(struct proc *p)
   p->swapFile = 0;
 }
 
+int validate_process_name(struct proc *p)
+{
+  if (strncmp(p->name, "initcode", sizeof("initcode")) == 0 || strncmp(p->name, "init", sizeof("init")) == 0)
+  {
+    return 0;
+  }
+  return 1;
+}
 int addUserPage(struct proc *p, uint64 va)
 {
-
+  if (validate_process_name(p) == 0)
+  {
+    return 0;
+  }
   if (p->swapFile == 0)
     createSwapFile(p);
 
@@ -144,12 +155,17 @@ int addUserPage(struct proc *p, uint64 va)
 
 int swapIfneeded(struct proc *p, int index)
 {
+  if (validate_process_name(p) == 0)
+  {
+    return 0;
+  }
+
   if (p->countPhysicalPages > MAX_PSYC_PAGES)
   {
     // take one of the used pages and move it to the swap file
     for (int i = 1; i < MAX_TOTAL_PAGES; i++)
     {
-      pte_t* pte = (pte_t*)walkaddr(p->pagetable, p->pages[i].va);
+      pte_t *pte = walk(p->pagetable, p->pages[i].va, 0);
       if (i != index && p->pages[i].isUsed == 1)
       {
         // write the page to the swap file and update the page table entry
@@ -158,7 +174,6 @@ int swapIfneeded(struct proc *p, int index)
         p->pages[i].isUsed = 0;
         // turn off the pte_v bit
         *pte = *pte & ~PTE_V;
-        p->pages[i].va |= PTE_PRESENT_FLAG;
         // TODO: need to free the page woith kfree
         // update the offset
         p->pages[i].offsetInFile = p->offsetInSwapFile;
@@ -285,13 +300,22 @@ proc_pagetable(struct proc *p)
   return pagetable;
 }
 
-
-int swapIn(struct proc* p, pte_t* pte){
+int swapIn(struct proc *p, pte_t *pte, uint64 stval)
+{
+  if (validate_process_name(p) == 0)
+  {
+    return 0;
+  }
+  uint64 va = PGROUNDDOWN(stval);
   uint64 pa = PTE2PA(*pte);
-  for(int i=0; i< MAX_TOTAL_PAGES; i++){
-    if(p->pages[i].pa == pa){
+
+  for (int i = 0; i < MAX_TOTAL_PAGES; i++)
+  {
+    struct procPage *page = &p->pages[i];
+    if (page->va == va)
+    {
       p->pages[i].isUsed = 1;
-      readFromSwapFile(p, (char*)pa, p->pages[i].offsetInFile, PGSIZE);
+      readFromSwapFile(p, (char *)pa, p->pages[i].offsetInFile, PGSIZE);
       mappages(p->pagetable, p->pages[i].va, PGSIZE, pa, PTE_W | PTE_R | PTE_X | PTE_U);
       return i;
     }

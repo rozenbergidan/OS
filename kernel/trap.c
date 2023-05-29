@@ -79,12 +79,13 @@ void usertrap(void)
       // need to use stval to address the PTE in the page table - if it was swapped or not
       pte_t *pte = walk(p->pagetable, stval, 0);
       // if it was swapped, need to swap it back to memory
-      if (!(*pte & PTE_V))
+      if (!(*pte & PTE_V) == 0)
       {
         // need to allocate it from the swap file offset
         // need to map it to the page table
-        printf("swaooung in page\n");
-        int index = swapIn(p, pte);
+        printf("swap in page\n");
+
+        int index = swapIn(p, pte, stval);
         // need to validated it doesn't pass the maximum number of phsical pages - if so swapped something else
         if (index != -1)
         {
@@ -172,32 +173,6 @@ void kerneltrap()
 
   if ((which_dev = devintr()) == 0)
   {
-    scause = r_scause();
-    uint64 stval = r_stval();
-    struct proc* p = myproc();
-    if (scause == 0x0000000d || scause == 0x0000000f)
-    { // if it's 13 or 15 - page fault
-      printf("got page fault in address %p\n", stval);
-      // stval holds the faulting address.
-      // need to use stval to address the PTE in the page table - if it was swapped or not
-      pte_t *pte = walk(p->pagetable, stval, 0);
-      // if it was swapped, need to swap it back to memory
-      if (!(*pte & PTE_V))
-      {
-        // need to allocate it from the swap file offset
-        // need to map it to the page table
-        int index = swapIn(p, pte);
-        // need to validated it doesn't pass the maximum number of phsical pages - if so swapped something else
-        if (index != -1)
-        {
-          swapIfneeded(p, index);
-          return;
-        }
-        // after that need to retry the instruction that caused the page fault
-        // if still fail - need to throw usertrap again and don't catch it
-      }
-      // if it wasn't swapped, it's page fault - and we should throw usertrap
-    }
     printf("scause %p\n", scause);
     printf("sepc=%p stval=%p\n", r_sepc(), r_stval());
     panic("kerneltrap");
