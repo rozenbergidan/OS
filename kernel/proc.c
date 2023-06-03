@@ -174,8 +174,9 @@ int swapIfneeded(struct proc *p, int index)
         p->pages[i].isUsed = 0;
         // turn off the pte_v bit
         pte_t *pte = p->pages[i].pte;
-        *pte = *pte | PTE_PG;
-        // TODO: need to free the page woith kfree
+        *pte = (*pte | PTE_PG);
+        ;
+        // TODO: need to free the page with kfree
         // update the offset
         p->pages[i].offsetInFile = p->offsetInSwapFile;
         p->offsetInSwapFile += PGSIZE;
@@ -395,6 +396,54 @@ int growproc(int n)
   return 0;
 }
 
+int copySwapFile(struct proc *parent, struct proc *child)
+{
+  // char buffer[PGSIZE];
+  // char *pa;
+  if (parent->swapFile == 0)
+    return 0;
+
+  if (child->swapFile == 0)
+    createSwapFile(child);
+
+  for (int i = 0; i < MAX_TOTAL_PAGES; i++)
+  {
+    if (parent->pages[i].isUsed == 0 && parent->pages[i].pte != 0)
+    {
+      child->pages[i].va = parent->pages[i].va;
+      // pa = kalloc();
+      // memset(pa, 0, PGSIZE);
+      // mappages(child->pagetable, child->pages[i].va, PGSIZE, (uint64)pa, PTE_R | PTE_U);
+      child->pages[i].isUsed = parent->pages[i].isUsed;
+      child->pages[i].offsetInFile = parent->pages[i].offsetInFile;
+      child->pages[i].pte = walk(child->pagetable, child->pages[i].va, 1);
+      printf("pte: %p\n", child->pages[i].pte);
+      child->pages[i].pa = PTE2PA(*child->pages[i].pte);
+      printf("pa: %p\n", child->pages[i].pa);
+    }
+  }
+
+  for (int i = 0; i < MAX_TOTAL_PAGES; i++)
+  {
+    if (parent->pages[i].isUsed == 0 && parent->pages[i].pte != 0)
+    {
+
+      printf("before read\n");
+      if (readFromSwapFile(parent, (char *)child->pages[i].pa, parent->pages[i].offsetInFile, PGSIZE) == -1)
+      {
+        return -1;
+      }
+
+      printf("before write\n");
+      if (writeToSwapFile(child, (char *)child->pages[i].pa, parent->pages[i].offsetInFile, PGSIZE) == -1)
+      {
+        return -1;
+      }
+      // memset(&buffer, 0, sizeof(buffer));
+    }
+  }
+  return 0;
+}
 // Create a new process, copying the parent.
 // Sets up child kernel stack to return as if from fork() system call.
 int fork(void)
@@ -443,6 +492,13 @@ int fork(void)
   acquire(&np->lock);
   np->state = RUNNABLE;
   release(&np->lock);
+
+  // if (copySwapFile(p, np) == -1)
+  // {
+  //   freeproc(np);
+  //   release(&np->lock);
+  //   return -1;
+  // }
 
   return pid;
 }
