@@ -91,6 +91,7 @@ struct procPage
   uint offsetInFile;
   uint nfua_counter;
   uint lapa_counter;
+  int pageId;
 };
 
 enum procstate
@@ -131,5 +132,6 @@ struct proc
   char name[16];               // Process name (debugging)
   struct file *swapFile;
   struct procPage pages[MAX_TOTAL_PAGES];
+  int pagesId;
   uint offsetInSwapFile;
 };

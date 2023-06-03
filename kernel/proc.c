@@ -230,6 +230,45 @@ int swapIfneededLAPA(struct proc *p, int index)
 
 int swapIfneededSCFIFO(struct proc *p, int index)
 {
+  if (validate_process_name(p) == 0)
+  {
+    return 0;
+  }
+
+  if (p->countPhysicalPages > MAX_PSYC_PAGES)
+  {
+    struct procPage *chosen = 0;
+    while (chosen == 0)
+    {
+      for (int i = 0; i < MAX_TOTAL_PAGES; i++)
+      {
+        if (p->pages[i].isUsed == 1)
+        {
+          if (*(p->pages[i].pte) & ~PTE_A)
+          {
+            chosen = &p->pages[i];
+            break;
+          }
+          else
+          {
+            *(p->pages[i].pte) = *(p->pages[i].pte) | PTE_A;
+          }
+        }
+      }
+    }
+
+    // write the page to the swap file and update the page table entry
+    writeToSwapFile(p, (char *)chosen->pa, p->offsetInSwapFile, PGSIZE);
+    p->countPhysicalPages--;
+    chosen->isUsed = 0;
+    // turn off the pte_v bit
+    pte_t *pte = chosen->pte;
+    *pte = (*pte | PTE_PG);
+    // TODO: need to free the page with kfree
+    // update the offset
+    chosen->offsetInFile = p->offsetInSwapFile;
+    p->offsetInSwapFile += PGSIZE;
+  }
   return 0;
 }
 
@@ -319,6 +358,8 @@ int addPageSCFIFO(struct proc *p, uint64 va)
       p->pages[index].isUsed = 1;
       p->pages[index].pte = walk(p->pagetable, p->pages[index].va, 1);
       p->pages[index].pa = PTE2PA(*p->pages[index].pte);
+      p->pages[index].pageId = p->pagesId;
+      p->pagesId++;
       p->countTotalPages++;
       p->countPhysicalPages++;
       break;
@@ -415,6 +456,7 @@ found:
   memset(&p->context, 0, sizeof(p->context));
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
+  p->pagesId = 0;
   return p;
 }
 
