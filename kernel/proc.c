@@ -384,23 +384,23 @@ int addUserPage(struct proc *p, uint64 va)
   }
   if (strncmp(SWAP_ALGO, SCFIFO, sizeof(SCFIFO)) == 0)
   {
-    printf("addPageSCFIFO\n");
+
     return addPageSCFIFO(p, va);
   }
   else if (strncmp(SWAP_ALGO, LAPA, sizeof(LAPA)) == 0)
   {
-    printf("addPageLAPA\n");
+
     return addPageLAPA(p, va);
   }
   else if (strncmp(SWAP_ALGO, NFUA, sizeof(NFUA)) == 0)
   {
-    printf("addPageNFUA\n");
+
     return addPageNFUA(p, va);
   }
   else if (strncmp(SWAP_ALGO, NONE, sizeof(NONE)) == 0)
   {
     // do nothing
-    printf("addPageNONE\n");
+
     return 0;
   }
   return 0;
@@ -636,9 +636,8 @@ int copySwapFile(struct proc *parent, struct proc *child)
       child->pages[i].isUsed = parent->pages[i].isUsed;
       child->pages[i].offsetInFile = parent->pages[i].offsetInFile;
       child->pages[i].pte = walk(child->pagetable, child->pages[i].va, 1);
-      printf("pte: %p\n", child->pages[i].pte);
+
       child->pages[i].pa = PTE2PA(*child->pages[i].pte);
-      printf("pa: %p\n", child->pages[i].pa);
     }
   }
 
@@ -647,13 +646,11 @@ int copySwapFile(struct proc *parent, struct proc *child)
     if (parent->pages[i].isUsed == 0 && parent->pages[i].pte != 0)
     {
 
-      printf("before read\n");
       if (readFromSwapFile(parent, (char *)child->pages[i].pa, parent->pages[i].offsetInFile, PGSIZE) == -1)
       {
         return -1;
       }
 
-      printf("before write\n");
       if (writeToSwapFile(child, (char *)child->pages[i].pa, parent->pages[i].offsetInFile, PGSIZE) == -1)
       {
         return -1;
@@ -838,6 +835,17 @@ int wait(uint64 addr)
   }
 }
 
+void updateAging(struct proc *p)
+{
+  for (int i = 0; i < MAX_TOTAL_PAGES; i++)
+  {
+    if (p->pages[i].isUsed == 1)
+    {
+      p->pages[i].nfua_counter = p->pages[i].nfua_counter >> 1;
+      p->pages[i].lapa_counter = p->pages[i].lapa_counter >> 1;
+    }
+  }
+}
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
 // Scheduler never returns.  It loops, doing:
@@ -868,6 +876,8 @@ void scheduler(void)
         c->proc = p;
         swtch(&c->context, &p->context);
 
+        // Update AGING
+        updateAging(p);
         // Process is done running for now.
         // It should have changed its p->state before coming back.
         c->proc = 0;
