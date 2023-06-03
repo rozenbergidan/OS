@@ -121,36 +121,116 @@ int validate_process_name(struct proc *p)
   }
   return 1;
 }
-int addUserPage(struct proc *p, uint64 va)
+
+int swapIfneededNFUA(struct proc *p, int index)
 {
   if (validate_process_name(p) == 0)
   {
     return 0;
   }
-  if (p->swapFile == 0)
-    createSwapFile(p);
-
-  if (p->countTotalPages >= MAX_TOTAL_PAGES)
+  int min_counter = p->pages[0].nfua_counter;
+  int min_index = 0;
+  if (p->countPhysicalPages > MAX_PSYC_PAGES)
   {
-    return -1;
+    for (int i = 1; i < MAX_TOTAL_PAGES; i++)
+    {
+      if (p->pages[i].isUsed == 1 && p->pages[i].nfua_counter < min_counter)
+      {
+        min_counter = p->pages[i].nfua_counter;
+        min_index = i;
+      }
+    }
+
+    // min_index holds the index for the page with the lowest counter
+    // write the page to the swap file and update the page table entry
+    writeToSwapFile(p, (char *)p->pages[min_index].pa, p->offsetInSwapFile, PGSIZE);
+    p->countPhysicalPages--;
+    p->pages[min_index].isUsed = 0;
+    // turn off the pte_v bit
+    pte_t *pte = p->pages[min_index].pte;
+    *pte = (*pte | PTE_PG);
+    // TODO: need to free the page with kfree
+    // update the offset
+    p->pages[min_index].offsetInFile = p->offsetInSwapFile;
+    p->offsetInSwapFile += PGSIZE;
   }
 
-  int index = 0;
-  for (; index < MAX_TOTAL_PAGES; index++)
+  for (int i = 0; i < MAX_TOTAL_PAGES; i++)
   {
-    if (p->pages[index].isUsed == 0 && p->pages[index].pte == 0)
+    if (p->pages[i].isUsed == 1)
     {
-      p->pages[index].va = va;
-      p->pages[index].isUsed = 1;
-      p->pages[index].pte = walk(p->pagetable, p->pages[index].va, 1);
-      p->pages[index].pa = PTE2PA(*p->pages[index].pte);
-      p->countTotalPages++;
-      p->countPhysicalPages++;
-      break;
+      p->pages[i].nfua_counter = p->pages[i].nfua_counter >> 1;
+      if (*(p->pages[i].pte) & PTE_A)
+        p->pages[i].nfua_counter = p->pages[i].nfua_counter | (1 << 31);
     }
   }
-  int res = swapIfneeded(p, index);
-  return res;
+  return 0;
+}
+
+int count_1_bits(uint num)
+{
+  int count = 0;
+  while (num)
+  {
+    count += num & 1;
+    num >>= 1;
+  }
+  return count;
+}
+
+int swapIfneededLAPA(struct proc *p, int index)
+{
+  if (validate_process_name(p) == 0)
+  {
+    return 0;
+  }
+  int min_ones_counter = count_1_bits(p->pages[0].lapa_counter);
+  int min_counter = p->pages[0].lapa_counter;
+  int min_index = 0;
+  if (p->countPhysicalPages > MAX_PSYC_PAGES)
+  {
+    for (int i = 1; i < MAX_TOTAL_PAGES; i++)
+    {
+      if (p->pages[i].isUsed == 1 && count_1_bits(p->pages[i].lapa_counter) <= min_ones_counter)
+      {
+        if (count_1_bits(p->pages[i].lapa_counter) == min_ones_counter)
+        {
+          if (p->pages[i].lapa_counter < min_counter)
+          {
+            min_ones_counter = count_1_bits(p->pages[i].lapa_counter);
+            min_counter = p->pages[i].lapa_counter;
+            min_index = i;
+          }
+          else
+          {
+            continue;
+          }
+        }
+        min_ones_counter = count_1_bits(p->pages[i].lapa_counter);
+        min_counter = p->pages[i].lapa_counter;
+        min_index = i;
+      }
+    }
+
+    // min_index holds the index for the page with the lowest counter
+    // write the page to the swap file and update the page table entry
+    writeToSwapFile(p, (char *)p->pages[min_index].pa, p->offsetInSwapFile, PGSIZE);
+    p->countPhysicalPages--;
+    p->pages[min_index].isUsed = 0;
+    // turn off the pte_v bit
+    pte_t *pte = p->pages[min_index].pte;
+    *pte = (*pte | PTE_PG);
+    // TODO: need to free the page with kfree
+    // update the offset
+    p->pages[min_index].offsetInFile = p->offsetInSwapFile;
+    p->offsetInSwapFile += PGSIZE;
+  }
+  return 0;
+}
+
+int swapIfneededSCFIFO(struct proc *p, int index)
+{
+  return 0;
 }
 
 int swapIfneeded(struct proc *p, int index)
@@ -184,6 +264,103 @@ int swapIfneeded(struct proc *p, int index)
       }
     }
     return -1;
+  }
+  return 0;
+}
+
+int addPageNFUA(struct proc *p, uint64 va)
+{
+  int index = 0;
+  for (; index < MAX_TOTAL_PAGES; index++)
+  {
+    if (p->pages[index].isUsed == 0 && p->pages[index].pte == 0)
+    {
+      p->pages[index].va = va;
+      p->pages[index].isUsed = 1;
+      p->pages[index].pte = walk(p->pagetable, p->pages[index].va, 1);
+      p->pages[index].pa = PTE2PA(*p->pages[index].pte);
+      p->pages[index].nfua_counter = 0;
+      p->countTotalPages++;
+      p->countPhysicalPages++;
+      break;
+    }
+  }
+  return swapIfneededNFUA(p, index);
+}
+
+int addPageLAPA(struct proc *p, uint64 va)
+{
+  int index = 0;
+  for (; index < MAX_TOTAL_PAGES; index++)
+  {
+    if (p->pages[index].isUsed == 0 && p->pages[index].pte == 0)
+    {
+      p->pages[index].va = va;
+      p->pages[index].isUsed = 1;
+      p->pages[index].pte = walk(p->pagetable, p->pages[index].va, 1);
+      p->pages[index].pa = PTE2PA(*p->pages[index].pte);
+      p->pages[index].lapa_counter = 0xFFFFFFFF;
+      p->countTotalPages++;
+      p->countPhysicalPages++;
+      break;
+    }
+  }
+  return swapIfneededLAPA(p, index);
+}
+
+int addPageSCFIFO(struct proc *p, uint64 va)
+{
+  int index = 0;
+  for (; index < MAX_TOTAL_PAGES; index++)
+  {
+    if (p->pages[index].isUsed == 0 && p->pages[index].pte == 0)
+    {
+      p->pages[index].va = va;
+      p->pages[index].isUsed = 1;
+      p->pages[index].pte = walk(p->pagetable, p->pages[index].va, 1);
+      p->pages[index].pa = PTE2PA(*p->pages[index].pte);
+      p->countTotalPages++;
+      p->countPhysicalPages++;
+      break;
+    }
+  }
+
+  return swapIfneededSCFIFO(p, index);
+}
+
+int addUserPage(struct proc *p, uint64 va)
+{
+  if (validate_process_name(p) == 0)
+  {
+    return 0;
+  }
+  if (strncmp(SWAP_ALGO, NONE, sizeof(NONE)) != 0 && p->swapFile == 0)
+    createSwapFile(p);
+
+  if (p->countTotalPages >= MAX_TOTAL_PAGES)
+  {
+    return -1;
+  }
+  if (strncmp(SWAP_ALGO, SCFIFO, sizeof(SCFIFO)) == 0)
+  {
+    printf("addPageSCFIFO\n");
+    return addPageSCFIFO(p, va);
+  }
+  else if (strncmp(SWAP_ALGO, LAPA, sizeof(LAPA)) == 0)
+  {
+    printf("addPageLAPA\n");
+    return addPageLAPA(p, va);
+  }
+  else if (strncmp(SWAP_ALGO, NFUA, sizeof(NFUA)) == 0)
+  {
+    printf("addPageNFUA\n");
+    return addPageNFUA(p, va);
+  }
+  else if (strncmp(SWAP_ALGO, NONE, sizeof(NONE)) == 0)
+  {
+    // do nothing
+    printf("addPageNONE\n");
+    return 0;
   }
   return 0;
 }
