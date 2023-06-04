@@ -541,6 +541,8 @@ int swapIn(struct proc *p, pte_t *pte, uint64 stval)
       *pte = *pte & ~PTE_V;
       // mappages(p->pagetable, p->pages[i].va, PGSIZE, PTE2PA(*pte), PTE_W | PTE_R | PTE_X | PTE_U);
       *pte = *pte | PTE_V;
+      p->pages[i].lapa_counter = 0xFFFFFFFF;
+      p->pages[i].nfua_counter = 0;
       return i;
     }
   }
