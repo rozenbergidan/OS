@@ -12,6 +12,7 @@
 #include "file.h"
 #include "stat.h"
 #include "proc.h"
+#include "fcntl.h"
 
 struct devsw devsw[NDEV];
 struct {
@@ -178,5 +179,35 @@ filewrite(struct file *f, uint64 addr, int n)
   }
 
   return ret;
+}
+
+int fileseek(struct file *f, int offset, int whence) {
+  if (f->type != FD_INODE) {
+    return -1;  // Seeking is only supported for FD_INODE files
+  }
+
+  ilock(f->ip);
+
+  if (whence == SEEK_SET) {
+    if (offset < 0) {
+      offset = 0;
+    }
+    f->off = offset;
+  } else if (whence == SEEK_CUR) {
+    if (f->off + offset < 0) {
+      offset = 0;
+    }
+    f->off += offset;
+  } else {
+    iunlock(f->ip);
+    return -1;  // Invalid whence argument
+  }
+
+  if (f->off > f->ip->size) {
+    f->off = f->ip->size;
+  }
+
+  iunlock(f->ip);
+  return 0;  // Success
 }
 
