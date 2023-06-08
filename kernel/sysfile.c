@@ -557,10 +557,8 @@ sys_seek(void)
     return -1;
   }
 
-  if (fd < 0 || fd >= NOFILE || (f = myproc()->ofile[fd]) == 0)
-  {
+ if (argfd(0, 0, &f) < 0)
     return -1;
-  }
   
   return fileseek(f, offset, whence);
 

@@ -10,6 +10,8 @@
         "spinlock.h": "c",
         "fs.h": "c",
         "sleeplock.h": "c",
-        "file.h": "c"
+        "file.h": "c",
+        "user.h": "c",
+        "limits": "c"
     },
 }
