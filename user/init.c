@@ -20,6 +20,11 @@ main(void)
     mknod("console", CONSOLE, 0);
     mknod("random", RANDOM, 0);
     open("console", O_RDWR);
+    int fd = open("random", O_RDWR);
+    char seed = 0x2B;
+    write(fd, &seed, 1);
+    close(fd);
+
   }
   dup(0);  // stdout
   dup(0);  // stderr

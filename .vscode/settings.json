@@ -13,6 +13,8 @@
         "file.h": "c",
         "user.h": "c",
         "limits": "c",
-        "buf.h": "c"
+        "buf.h": "c",
+        "proc.h": "c",
+        "fcntl.h": "c"
     },
 }
