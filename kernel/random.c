@@ -32,7 +32,6 @@ int randomRead(int fd, void *dst, int n)
     for (int i = 0; i < n; i++)
     {
         seed = lfsr_char(seed);
-        printf("seed: %d\n", seed);
         buffer[i] = seed;
     }
 
@@ -51,13 +50,13 @@ int randomRead(int fd, void *dst, int n)
 int randomWrite(int fd, const void *src, int n)
 {
 
-    printf("seed: %d\n", seed);
+    // printf("seed: %d\n", seed);
     if (n != 1)
         return -1; // Invalid number of bytes for seeding
 
     if (either_copyin(&seed, 1, (uint64)src, 1) == -1)
         return -1;
-    printf("seed: %d\n", seed);
+    // printf("seed: %d\n", seed);
     return 1; // Return 1 on success
 }
 
