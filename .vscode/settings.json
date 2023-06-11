@@ -12,6 +12,7 @@
         "sleeplock.h": "c",
         "file.h": "c",
         "user.h": "c",
-        "limits": "c"
+        "limits": "c",
+        "buf.h": "c"
     },
 }
